@@ -1,42 +1,40 @@
 # Shope
 
-Monorepo e-commerce gồm **Frontend** (React + Vite + TypeScript), **Backend** (FastAPI + SQLAlchemy), và **Infra** (Docker — MySQL 8 + Milvus).
+E-commerce monorepo with **Frontend** (React + Vite + TypeScript), **Backend** (FastAPI + SQLAlchemy), and **Infra** (Docker — MySQL 8 + Milvus).
 
-## Cấu trúc thư mục
+## Project Structure
 
 ```
 shope/
-├── frontend/          # ReactJS + Vite + TypeScript
+├── frontend/          # React + Vite + TypeScript
 ├── backend/           # Python + FastAPI + SQLAlchemy + Alembic
 ├── infra/             # docker-compose.yml
-├── Makefile           # Lệnh tắt cho các tác vụ phổ biến
-├── .env.example       # Mẫu biến môi trường
+├── Makefile           # Shortcuts for common tasks
+├── .env.example       # Environment variable template
 └── README.md
 ```
 
-## Khởi động nhanh (dùng Makefile)
+## Quick Start (via Makefile)
 
 ```bash
-cp .env.example backend/.env   # 1. Cấu hình .env
-make docker-up                 # 2. Khởi động MySQL + Milvus
-make venv                      # 3a. Tạo virtual environment
-make install-backend           # 3b. Cài packages Python
-make migrate                   # 4. Tạo tables trong MySQL
-make run-backend               # 5. Chạy API server
-# Terminal khác:
-make install-frontend          # 6. Cài Node packages
-make run-frontend              # 7. Chạy Vite dev server
+cp .env.example backend/.env   # 1. Configure .env
+make docker-up                 # 2. Start MySQL + Milvus
+make venv                      # 3a. Create virtual environment
+make install-backend           # 3b. Install Python packages
+make migrate                   # 4. Create tables in MySQL
+make run-backend               # 5. Run API server
+# In another terminal:
+make install-frontend          # 6. Install Node packages
+make run-frontend              # 7. Run Vite dev server
 ```
 
-Xem tất cả lệnh có sẵn: `make help`
+See all available commands: `make help`
 
 ---
 
----
+## Requirements
 
-## Yêu cầu hệ thống
-
-| Công cụ | Phiên bản tối thiểu |
+| Tool | Minimum version |
 |---|---|
 | Docker + Docker Compose | 24.x |
 | Python | 3.11+ |
@@ -44,20 +42,20 @@ Xem tất cả lệnh có sẵn: `make help`
 
 ---
 
-## Bước 1 — Chuẩn bị file `.env`
+## Step 1 — Configure `.env`
 
 ```bash
 cp .env.example backend/.env
 ```
 
-Mở `backend/.env` và chỉnh sửa các giá trị:
+Open `backend/.env` and update the values:
 
 ```env
 MYSQL_PASSWORD=shope_password
-SECRET_KEY=<chuỗi ngẫu nhiên mạnh>
+SECRET_KEY=<strong random string>
 ```
 
-Tạo `SECRET_KEY` ngẫu nhiên:
+Generate a random `SECRET_KEY`:
 
 ```bash
 python -c "import secrets; print(secrets.token_hex(32))"
@@ -65,87 +63,87 @@ python -c "import secrets; print(secrets.token_hex(32))"
 
 ---
 
-## Bước 2 — Khởi động Docker (MySQL + Milvus)
+## Step 2 — Start Docker (MySQL + Milvus)
 
 ```bash
-# Đứng tại thư mục gốc của project
+# From the project root
 docker compose -f infra/docker-compose.yml up -d
 ```
 
-Kiểm tra trạng thái:
+Check status:
 
 ```bash
 docker compose -f infra/docker-compose.yml ps
 ```
 
-Dịch vụ | Cổng
----|---
-MySQL | `localhost:3306`
-Milvus gRPC | `localhost:19530`
-Milvus HTTP | `localhost:9091`
-MinIO Console | `localhost:9001`
+| Service | Port |
+|---|---|
+| MySQL | `localhost:3306` |
+| Milvus gRPC | `localhost:19530` |
+| Milvus HTTP | `localhost:9091` |
+| MinIO Console | `localhost:9001` |
 
 ---
 
-## Bước 3 — Cài đặt Backend
+## Step 3 — Install Backend
 
-**Cách nhanh (dùng Makefile — đứng tại thư mục gốc):**
+**Quick (via Makefile — from project root):**
 
 ```bash
 make venv
 make install-backend
 ```
 
-**Hoặc thủ công:**
+**Or manually:**
 
 ```bash
 cd backend
 
-# Tạo virtual environment
+# Create virtual environment
 python -m venv venv
 
-# Kích hoạt venv
+# Activate venv
 source venv/bin/activate        # Linux / macOS
-# hoặc
+# or
 venv\Scripts\activate           # Windows
 
-# Cài packages
+# Install packages
 pip install -r requirements.txt
 ```
 
 ---
 
-## Bước 4 — Chạy Database Migration
+## Step 4 — Run Database Migrations
 
-Đảm bảo MySQL đang chạy (Bước 2), sau đó:
+Make sure MySQL is running (Step 2), then:
 
 ```bash
-# Cách nhanh (đứng tại thư mục gốc):
+# Quick (from project root):
 make migrate
 
-# Hoặc thủ công (trong backend/ với venv kích hoạt):
+# Or manually (inside backend/ with venv active):
 alembic upgrade head
 ```
 
-Lệnh này tạo tất cả 9 bảng trong MySQL:
+This creates all 9 tables in MySQL:
 `users`, `brands`, `categories`, `products`, `orders`, `order_items`, `cart_items`, `addresses`, `reviews`
 
-Tạo migration mới khi thay đổi model:
+To generate a new migration after changing a model:
 
 ```bash
-alembic revision --autogenerate -m "describe your change"
-alembic upgrade head
+make makemigrations msg="describe your change"
+make migrate
 ```
 
 ---
 
-## Bước 5 — Chạy Backend
+## Step 5 — Run Backend
 
 ```bash
-# Cách nhanh (đứng tại thư mục gốc):
+# Quick (from project root):
 make run-backend
 
-# Hoặc thủ công (trong backend/ với venv kích hoạt):
+# Or manually (inside backend/ with venv active):
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -154,14 +152,14 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ### Auth API
 
-| Method | Endpoint | Mô tả |
+| Method | Endpoint | Description |
 |---|---|---|
-| POST | `/api/v1/auth/register` | Đăng ký tài khoản mới |
-| POST | `/api/v1/auth/login` | Đăng nhập, nhận JWT token |
-| POST | `/api/v1/auth/logout` | Đăng xuất (client xóa token) |
-| GET  | `/api/v1/auth/me` | Lấy thông tin user hiện tại (Bearer token) |
+| POST | `/api/v1/auth/register` | Register a new account |
+| POST | `/api/v1/auth/login` | Log in and receive a JWT token |
+| POST | `/api/v1/auth/logout` | Log out (client discards token) |
+| GET  | `/api/v1/auth/me` | Get current user info (Bearer token required) |
 
-**Ví dụ đăng ký:**
+**Register example:**
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/register \
@@ -175,7 +173,7 @@ curl -X POST http://localhost:8000/api/v1/auth/register \
   }'
 ```
 
-**Ví dụ đăng nhập:**
+**Login example:**
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/login \
@@ -185,28 +183,28 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
 
 ---
 
-## Bước 6 — Cài đặt & Chạy Frontend
+## Step 6 — Install & Run Frontend
 
 ```bash
-# Cách nhanh (đứng tại thư mục gốc):
+# Quick (from project root):
 make install-frontend
 make run-frontend
 
-# Hoặc thủ công:
+# Or manually:
 cd frontend && npm install && npm run dev
 ```
 
-Frontend chạy tại: http://localhost:5173
+Frontend runs at: http://localhost:5173
 
-Vite đã được cấu hình proxy: mọi request đến `/api/*` sẽ được forward đến `http://localhost:8000`.
+Vite is configured with a proxy: all requests to `/api/*` are forwarded to `http://localhost:8000`.
 
 ---
 
-## Dừng Docker
+## Stop Docker
 
 ```bash
 docker compose -f infra/docker-compose.yml down
 
-# Dừng và xóa toàn bộ volumes (xóa data):
+# Stop and remove all volumes (deletes data):
 docker compose -f infra/docker-compose.yml down -v
 ```
