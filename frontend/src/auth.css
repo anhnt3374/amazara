@@ -1,0 +1,336 @@
+/* ── Page wrapper ─────────────────────────────────────────── */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.auth-page--login {
+  background: radial-gradient(ellipse at 65% 55%, #7B1A1A 0%, #3A0A0A 55%, #1C0404 100%);
+}
+
+.auth-page--signup {
+  background: radial-gradient(ellipse at 65% 50%, #0D1B3E 0%, #071025 55%, #020810 100%);
+}
+
+/* ── Card ─────────────────────────────────────────────────── */
+.auth-card {
+  display: flex;
+  width: 100%;
+  max-width: 860px;
+  min-height: 510px;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55);
+}
+
+/* ── Left panel ───────────────────────────────────────────── */
+.auth-card__left {
+  flex: 0 0 42%;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  padding: 28px;
+  overflow: hidden;
+}
+
+.auth-card__left--login {
+  background: linear-gradient(150deg, #3D0A0A 0%, #8B2010 45%, #D04520 80%, #E05A15 100%);
+}
+
+.auth-card__left--signup {
+  background: linear-gradient(150deg, #060F25 0%, #0C2050 45%, #0E3585 80%, #1550C0 100%);
+}
+
+.auth-glow {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.auth-card__left--login .auth-glow {
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(255, 140, 40, 0.35) 0%, transparent 70%);
+  bottom: 15%;
+  left: 20%;
+}
+
+.auth-card__left--signup .auth-glow {
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(50, 160, 255, 0.3) 0%, transparent 70%);
+  bottom: 20%;
+  left: 10%;
+}
+
+.auth-logo {
+  width: 38px;
+  height: 38px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Right panel ──────────────────────────────────────────── */
+.auth-card__right {
+  flex: 1;
+  background: #ffffff;
+  padding: 36px 40px 32px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* ── Back button ──────────────────────────────────────────── */
+.auth-back {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-bottom: 20px;
+  color: #555;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  line-height: 1;
+}
+
+.auth-back:hover {
+  color: #111;
+}
+
+/* ── Headings ─────────────────────────────────────────────── */
+.auth-title {
+  font-size: 34px;
+  font-weight: 700;
+  color: #111;
+  margin: 0 0 6px;
+  line-height: 1.15;
+}
+
+.auth-subtitle {
+  font-size: 13px;
+  color: #666;
+  margin: 0 0 22px;
+}
+
+.auth-subtitle a {
+  color: #111;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+/* ── Form ─────────────────────────────────────────────────── */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  flex: 1;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-input {
+  height: 42px;
+  border: 1.5px solid #E0E0E0;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 14px;
+  color: #111;
+  outline: none;
+  transition: border-color 0.18s;
+  width: 100%;
+  background: #fff;
+}
+
+.form-input::placeholder {
+  color: #BBB;
+}
+
+.form-input:focus {
+  border-color: #555;
+}
+
+.form-input--error {
+  border-color: #E53E3E !important;
+}
+
+.field-error {
+  font-size: 11.5px;
+  color: #E53E3E;
+  margin-top: 2px;
+}
+
+/* ── Password field ───────────────────────────────────────── */
+.password-wrapper {
+  position: relative;
+}
+
+.password-wrapper .form-input {
+  padding-right: 40px;
+}
+
+.eye-toggle {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #999;
+  display: flex;
+  align-items: center;
+}
+
+.eye-toggle:hover {
+  color: #555;
+}
+
+/* ── Forgot password ──────────────────────────────────────── */
+.forgot-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -6px;
+}
+
+.forgot-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: #333;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ── Submit button ────────────────────────────────────────── */
+.submit-btn {
+  height: 46px;
+  background: #111;
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s, opacity 0.18s;
+  margin-top: 2px;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: #333;
+}
+
+.submit-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* ── Global API error ─────────────────────────────────────── */
+.global-error {
+  background: #FFF5F5;
+  border: 1px solid #FED7D7;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 13px;
+  color: #C53030;
+  line-height: 1.4;
+}
+
+/* ── Terms row ────────────────────────────────────────────── */
+.terms-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.terms-checkbox {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: #111;
+  flex-shrink: 0;
+}
+
+.terms-checkbox--error {
+  accent-color: #E53E3E;
+  outline: 2px solid #E53E3E;
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+
+.terms-label {
+  font-size: 12px;
+  color: #444;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.terms-label a {
+  color: #111;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.terms-label--error {
+  color: #E53E3E;
+}
+
+.terms-label--error a {
+  color: #E53E3E;
+}
+
+/* ── Divider ──────────────────────────────────────────────── */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #AAA;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #E8E8E8;
+}
+
+/* ── Social buttons ───────────────────────────────────────── */
+.social-row {
+  display: flex;
+  gap: 10px;
+}
+
+.social-btn {
+  flex: 1;
+  height: 40px;
+  border: 1.5px solid #D0D0D0;
+  border-radius: 8px;
+  background: #E8E8E8;
+  color: #888;
+  cursor: not-allowed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.55;
+  pointer-events: none;
+}
