@@ -62,7 +62,7 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
 
 @router.post("/logout")
 def logout():
-    # JWT là stateless — client chịu trách nhiệm xóa token
+    # JWT is stateless — client is responsible for discarding the token
     return {"message": "Logged out successfully"}
 
 

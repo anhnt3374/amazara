@@ -9,8 +9,8 @@ from app.core.config import settings
 
 
 def _prehash(password: str) -> bytes:
-    """SHA-256 pre-hash để vượt giới hạn 72-byte của bcrypt.
-    Output là 44-byte base64, luôn nằm trong giới hạn an toàn.
+    """SHA-256 pre-hash to bypass bcrypt's 72-byte limit.
+    Output is 44-byte base64, always within the safe range.
     """
     return base64.b64encode(hashlib.sha256(password.encode()).digest())
 

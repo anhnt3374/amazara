@@ -11,17 +11,11 @@ export default function Success() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: '#fff',
-    }}>
-      <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <p style={{ fontSize: '20px', color: '#333', fontWeight: 500 }}>Successfully</p>
+    <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="text-center flex flex-col gap-3">
+        <p className="text-xl text-[#333] font-medium">Successfully</p>
         {user && (
-          <div style={{ fontSize: '14px', color: '#666', lineHeight: '1.7' }}>
+          <div className="text-sm text-[#666] leading-[1.7]">
             <div><strong>Fullname:</strong> {user.fullname}</div>
             <div><strong>Username:</strong> {user.username}</div>
             <div><strong>Email:</strong> {user.email}</div>
@@ -29,19 +23,9 @@ export default function Success() {
         )}
         <button
           onClick={handleLogout}
-          style={{
-            marginTop: '8px',
-            padding: '10px 24px',
-            background: '#111',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '50px',
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
+          className="mt-2 px-6 py-[10px] bg-[#111] text-white rounded-full text-sm font-semibold cursor-pointer hover:bg-[#333] transition-colors"
         >
-          Đăng xuất
+          Log out
         </button>
       </div>
     </div>

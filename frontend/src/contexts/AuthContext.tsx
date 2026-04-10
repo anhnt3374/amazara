@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Bootstrap: khôi phục session từ localStorage khi app khởi động
+  // Bootstrap: restore session from localStorage on app startup
   useEffect(() => {
     const stored = localStorage.getItem(TOKEN_KEY)
     if (!stored) {
@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = useCallback(async (payload: RegisterPayload) => {
     await apiRegister(payload)
-    // Auto-login sau khi đăng ký thành công
+    // Auto-login after successful registration
     await login(payload.email, payload.password)
   }, [login])
 

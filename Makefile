@@ -6,20 +6,20 @@
 
 help:
 	@echo "Backend"
-	@echo "  make venv                  Tạo virtual environment tại backend/venv"
-	@echo "  make install-backend       Cài packages Python từ requirements.txt"
-	@echo "  make makemigrations msg=x  Tạo migration file từ models"
-	@echo "  make migrate               Áp dụng migration vào database"
-	@echo "  make run-backend           Chạy FastAPI dev server (port 8000)"
+	@echo "  make venv                  Create virtual environment at backend/venv"
+	@echo "  make install-backend       Install Python packages from requirements.txt"
+	@echo "  make makemigrations msg=x  Generate Alembic migration file from models"
+	@echo "  make migrate               Apply pending migrations to the database"
+	@echo "  make run-backend           Run FastAPI dev server (port 8000)"
 	@echo ""
 	@echo "Frontend"
-	@echo "  make install-frontend      Cài Node packages (npm install)"
-	@echo "  make run-frontend          Chạy Vite dev server (port 5173)"
+	@echo "  make install-frontend      Install Node packages (npm install)"
+	@echo "  make run-frontend          Run Vite dev server (port 5173)"
 	@echo ""
 	@echo "Docker"
-	@echo "  make docker-up             Khởi động MySQL + Milvus"
-	@echo "  make docker-down           Dừng Docker services"
-	@echo "  make docker-logs           Xem logs Docker services"
+	@echo "  make docker-up             Start MySQL + Milvus"
+	@echo "  make docker-down           Stop Docker services"
+	@echo "  make docker-logs           View Docker service logs"
 
 # ── Backend ───────────────────────────────────────────────────────────────────
 

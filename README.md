@@ -19,11 +19,12 @@ shope/
 ```bash
 cp .env.example backend/.env   # 1. Cấu hình .env
 make docker-up                 # 2. Khởi động MySQL + Milvus
-make setup-backend             # 3. Tạo venv + cài packages
+make venv                      # 3a. Tạo virtual environment
+make install-backend           # 3b. Cài packages Python
 make migrate                   # 4. Tạo tables trong MySQL
 make run-backend               # 5. Chạy API server
 # Terminal khác:
-make setup-frontend            # 6. Cài Node packages
+make install-frontend          # 6. Cài Node packages
 make run-frontend              # 7. Chạy Vite dev server
 ```
 
@@ -91,7 +92,8 @@ MinIO Console | `localhost:9001`
 **Cách nhanh (dùng Makefile — đứng tại thư mục gốc):**
 
 ```bash
-make setup-backend
+make venv
+make install-backend
 ```
 
 **Hoặc thủ công:**
@@ -157,6 +159,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 | POST | `/api/v1/auth/register` | Đăng ký tài khoản mới |
 | POST | `/api/v1/auth/login` | Đăng nhập, nhận JWT token |
 | POST | `/api/v1/auth/logout` | Đăng xuất (client xóa token) |
+| GET  | `/api/v1/auth/me` | Lấy thông tin user hiện tại (Bearer token) |
 
 **Ví dụ đăng ký:**
 
@@ -186,7 +189,7 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
 
 ```bash
 # Cách nhanh (đứng tại thư mục gốc):
-make setup-frontend
+make install-frontend
 make run-frontend
 
 # Hoặc thủ công:

@@ -2,16 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Language
+
+All code, comments, error messages, UI strings, API responses, and documentation must be written in **English**. Do not use any other language anywhere in the codebase.
+
 ## Development Commands
 
 All commands run from the **project root** via Makefile:
 
 ```bash
-make setup-backend              # Create backend/venv + pip install -r requirements.txt
+make venv                       # Create backend/venv
+make install-backend            # pip install -r backend/requirements.txt into venv
 make makemigrations msg=<name>  # Generate Alembic migration file from current models
 make migrate                    # Apply pending migrations to MySQL (alembic upgrade head)
 make run-backend                # uvicorn app.main:app --reload on :8000
-make setup-frontend             # npm install in frontend/
+make install-frontend           # npm install in frontend/
 make run-frontend               # Vite dev server on :5173
 make docker-up                  # Start MySQL + Milvus via infra/docker-compose.yml
 make docker-down                # Stop Docker services
@@ -78,13 +83,19 @@ Swagger UI available at `http://localhost:8000/docs` only when `APP_ENV=developm
 | `App.tsx` | BrowserRouter + `AuthProvider` wrapper; `ProtectedRoute` (redirects to `/login` if no user), `GuestRoute` (redirects to `/success` if already logged in) |
 | `contexts/AuthContext.tsx` | Central auth state: `user`, `token`, `loading`; `login()`, `register()` (auto-login after register), `logout()`; bootstraps from `localStorage` on mount by calling `GET /api/v1/auth/me` |
 | `hooks/useAuth.ts` | `useAuth()` — consumes `AuthContext`; throws if used outside `AuthProvider` |
-| `index.css` | Global CSS reset; imported in `main.tsx` |
-| `auth.css` | Shared styles for Login and SignUp pages (split-panel card layout, error states) |
+| `index.css` | Tailwind v4 entry: `@import "tailwindcss"` + base layer (font, link, button resets) |
 | `components/Icons.tsx` | SVG icon components: `ButterflyLogo`, `EyeIcon`, `EyeOffIcon`, `ArrowLeftIcon`, `GoogleIcon`, `FacebookIcon` |
 | `services/auth.ts` | Raw fetch wrappers: `login()` → `{access_token}`, `register()` → `UserOut`, `getMe(token)` → `UserOut`; exports `ApiError`, `UserOut`, `RegisterPayload` |
 | `pages/Login.tsx` | Login form; uses `useAuth().login()`; maps `"Invalid email or password"` to Vietnamese |
 | `pages/SignUp.tsx` | SignUp form (fullname, username, email, password); uses `useAuth().register()`; client-side password ≥8 chars; maps API conflict errors to per-field messages |
 | `pages/Success.tsx` | Shows logged-in user's fullname/username/email and a logout button |
+
+### Tailwind CSS v4
+
+- Setup: `@tailwindcss/vite` plugin in `vite.config.ts` — no `tailwind.config.*` file needed
+- Entry: `@import "tailwindcss"` in `index.css`
+- Conditional classes: `clsx` — e.g. `clsx(inputBase, error ? 'border-red-500' : 'border-[#E0E0E0]')`
+- Complex gradients use inline `style` props (arbitrary radial/linear gradients aren't fully expressible in Tailwind utilities)
 
 ### Auth identity flow
 
@@ -102,7 +113,7 @@ Vite dev proxy forwards `/api/*` → `http://localhost:8000` — no CORS issues 
 
 Social login buttons (Google, Facebook) are rendered but non-functional: `disabled` + `pointer-events: none`.
 
-Terms & Condition checkbox: submitting without checking applies `terms-checkbox--error` / `terms-label--error` CSS classes, turning the row red.
+Terms & Condition checkbox: error state uses `clsx` to toggle `border-red-500` / `text-red-500` classes on the row.
 
 ### Adding a new API endpoint
 

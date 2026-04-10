@@ -35,7 +35,7 @@ export async function register(payload: RegisterPayload): Promise<UserOut> {
   })
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
-    throw new ApiError(res.status, data.detail ?? 'Đăng ký thất bại')
+    throw new ApiError(res.status, data.detail ?? 'Registration failed')
   }
   return res.json()
 }
@@ -48,7 +48,7 @@ export async function login(payload: LoginPayload): Promise<{ access_token: stri
   })
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
-    throw new ApiError(res.status, data.detail ?? 'Đăng nhập thất bại')
+    throw new ApiError(res.status, data.detail ?? 'Login failed')
   }
   return res.json()
 }
