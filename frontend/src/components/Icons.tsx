@@ -59,3 +59,49 @@ export function FacebookIcon() {
     </svg>
   )
 }
+
+export function NikeSwoosh({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 84 30" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M7.9 24.6C5.3 24.6 3.6 23.4 3.6 21.4C3.6 19 5.5 17.7 9 17.5L14.1 17.2V16.1C14.1 14.2 12.9 13.2 10.7 13.2C8.8 13.2 7.5 14 7.2 15.4H4.2C4.4 12.5 6.9 10.7 10.8 10.7C14.9 10.7 17.2 12.6 17.2 15.9V24.3H14.2V22.1H14.1C13.1 23.7 11.4 24.6 7.9 24.6ZM14.1 20V19L9.5 19.3C7.6 19.4 6.7 20.1 6.7 21.3C6.7 22.5 7.7 23.2 9.3 23.2C11.9 23.2 14.1 21.8 14.1 20ZM0 24.3V11H3.1V24.3H0ZM20.4 11H23.5V24.3H20.4V11ZM27.2 11H30.4L36.4 21.6H36.5L42.5 11H45.7L37.1 24.3H35.8L27.2 11ZM47.7 18C47.7 13.9 50.6 10.7 55.1 10.7C59.3 10.7 62 13.3 62 17.3C62 17.9 61.9 18.4 61.9 18.7H50.8C51 21 52.9 22.5 55.5 22.5C57.4 22.5 58.8 21.7 59.5 20.4H62.4C61.5 23.1 59 24.6 55.4 24.6C50.7 24.6 47.7 21.5 47.7 18ZM59 16.8C58.8 14.6 57.3 13.2 55.1 13.2C52.9 13.2 51.3 14.7 50.9 16.8H59ZM64.5 11H67.7V13.4H67.8C68.8 11.8 70.4 10.7 72.7 10.7C76.3 10.7 78.5 12.9 78.5 16.4V24.3H75.4V17C75.4 14.7 74.2 13.2 72 13.2C69.7 13.2 67.6 14.9 67.6 17.5V24.3H64.5V11Z" />
+    </svg>
+  )
+}
+
+export function JordanLogo({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 30 34" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M15 0C11.5 3.5 8 5 4 5C5 9 8 12 12 13C8 14 5 17 4 21C6 21 8 20.5 10 19.5C8 22 7 25 7.5 28C10 27 12.5 24.5 14 21.5C13.5 25 14 28.5 15 31.5C16 28.5 16.5 25 16 21.5C17.5 24.5 20 27 22.5 28C23 25 22 22 20 19.5C22 20.5 24 21 26 21C25 17 22 14 18 13C22 12 25 9 26 5C22 5 18.5 3.5 15 0Z" />
+    </svg>
+  )
+}
+
+export function SearchIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  )
+}
+
+export function HeartIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="22" height="22" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  )
+}
+
+export function BagIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="22" height="22" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <path d="M16 10a4 4 0 0 1-8 0" />
+    </svg>
+  )
+}

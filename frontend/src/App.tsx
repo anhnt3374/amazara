@@ -1,9 +1,13 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { useAuth } from './hooks/useAuth'
+import Layout from './components/Layout'
 import Login from './pages/Login'
 import SignUp from './pages/SignUp'
 import Success from './pages/Success'
+import Home from './pages/Home'
+import Favorites from './pages/Favorites'
+import Cart from './pages/Cart'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -15,7 +19,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function GuestRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   if (loading) return null
-  if (user) return <Navigate to="/success" replace />
+  if (user) return <Navigate to="/" replace />
   return <>{children}</>
 }
 
@@ -24,10 +28,15 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* Pages with Header via Layout */}
+          <Route path="/" element={<Layout><Home /></Layout>} />
+          <Route path="/success" element={<Layout><ProtectedRoute><Success /></ProtectedRoute></Layout>} />
+          <Route path="/favorites" element={<Layout><ProtectedRoute><Favorites /></ProtectedRoute></Layout>} />
+          <Route path="/cart" element={<Layout><ProtectedRoute><Cart /></ProtectedRoute></Layout>} />
+
+          {/* Auth pages — full-page design, no Layout */}
           <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
           <Route path="/signup" element={<GuestRoute><SignUp /></GuestRoute>} />
-          <Route path="/success" element={<ProtectedRoute><Success /></ProtectedRoute>} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
