@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working in this repository.
 
 ## Language
 
-All code, comments, error messages, UI strings, API responses, and documentation must be written in **English**. Do not use any other language anywhere in the codebase.
+All code, comments, error messages, UI strings, API responses, and documentation must be written in **English**.
 
 ## Development Commands
 
@@ -12,115 +12,65 @@ All commands run from the **project root** via Makefile:
 
 ```bash
 make venv                       # Create backend/venv
-make install-backend            # pip install -r backend/requirements.txt into venv
-make makemigrations msg=<name>  # Generate Alembic migration file from current models
-make migrate                    # Apply pending migrations to MySQL (alembic upgrade head)
-make run-backend                # uvicorn app.main:app --reload on :8000
+make install-backend            # pip install into venv
+make makemigrations msg=<name>  # Generate Alembic migration file
+make migrate                    # Apply pending migrations
+make run-backend                # uvicorn on :8000
 make install-frontend           # npm install in frontend/
 make run-frontend               # Vite dev server on :5173
-make docker-up                  # Start MySQL + Milvus via infra/docker-compose.yml
+make docker-up                  # Start MySQL + Milvus
 make docker-down                # Stop Docker services
 ```
 
-Backend commands execute via `backend/venv/bin/` — never assume a globally activated venv.
+Backend commands run via `backend/venv/bin/` — never assume a globally activated venv.
 
-**Migration workflow** — two steps always required in order:
-```bash
-make makemigrations msg="describe_change"   # creates a file in alembic/versions/
-make migrate                                # applies it to MySQL
+## Documentation
+
+Feature knowledge lives in `/docs/`. Always read docs before modifying a feature area.
+
+### How to find relevant docs
+
+1. **Start with the index:** Read `docs/index/feature-map.md` to map your question to a feature.
+2. **For a concrete task:** Read `docs/index/task-map.md` for the exact reading order.
+3. **Read only what is needed** — 2–4 files is the target. Do not scan all of `/docs/`.
+
+### Docs structure
+
 ```
-Running `make migrate` with an empty `alembic/versions/` does nothing. Always generate a migration file first.
-
-Manual Alembic commands (from `backend/` with venv active):
-```bash
-alembic revision --autogenerate -m "description"
-alembic upgrade head
-alembic downgrade -1
-```
-
-## Architecture Overview
-
-### Monorepo layout
-- `frontend/` — React 18 + Vite + TypeScript; react-router-dom v6 for routing
-- `backend/` — FastAPI application with SQLAlchemy ORM + Alembic migrations
-- `infra/` — Docker Compose: MySQL 8.0 (port 3306) + Milvus standalone (port 19530) + supporting etcd/MinIO
-
-### Backend structure (`backend/app/`)
-
-| Layer | Path | Responsibility |
-|---|---|---|
-| Entry point | `main.py` | Imports `app.db.base` first (registers all ORM models); creates FastAPI app, CORS (allows `localhost:5173`), mounts `api_router` |
-| Config | `core/config.py` | Pydantic `Settings` reads `backend/.env`; exposes `settings` singleton and `settings.DATABASE_URL` |
-| Security | `core/security.py` | Password hashing via `bcrypt` directly (no passlib); SHA-256 pre-hash before bcrypt to remove 72-byte limit; JWT via `python-jose` |
-| DB session | `db/session.py` | SQLAlchemy `engine` + `SessionLocal`; `get_db()` FastAPI dependency |
-| Model registry | `db/base.py` | Imports all 9 models — **must be updated** when adding a new model; imported in `main.py` to ensure SQLAlchemy mapper resolution before first request |
-| Models | `models/` | One file per table; all inherit `Base` + `UUIDMixin` (string UUID PK, auto-generated) |
-| Schemas | `schemas/` | Pydantic v2 models for request/response validation |
-| CRUD | `crud/` | Plain functions accepting `Session`; no repository class pattern |
-| API | `api/v1/endpoints/` | FastAPI routers; mounted via `api/v1/router.py` at prefix `/api/v1` |
-| Auth dependency | `api/v1/endpoints/auth.py` → `get_current_user` | Reads `Authorization: Bearer <token>`, decodes JWT, returns `User`; reuse as `Depends(get_current_user)` on any protected endpoint |
-
-### Password hashing note
-
-`passlib` was removed due to incompatibility with `bcrypt>=4.0`. `core/security.py` uses `bcrypt` directly. Passwords are SHA-256 pre-hashed before bcrypt to bypass bcrypt's 72-byte limit — this is transparent to callers of `hash_password()` / `verify_password()`.
-
-### Database schema (MySQL)
-
-9 tables with string UUID PKs:
-`users` ← `orders`, `cart_items`, `addresses`, `reviews`
-`brands` ← `categories` ← `products` ← `order_items`, `cart_items`, `reviews`
-
-### Environment
-
-`backend/.env` is loaded by `core/config.py`. Required variables are in `.env.example` at the project root. Copy with `cp .env.example backend/.env`.
-
-Swagger UI available at `http://localhost:8000/docs` only when `APP_ENV=development`.
-
-### Frontend structure (`frontend/src/`)
-
-| Path | Responsibility |
-|---|---|
-| `App.tsx` | BrowserRouter + `AuthProvider` wrapper; `ProtectedRoute` (redirects to `/login` if no user), `GuestRoute` (redirects to `/success` if already logged in) |
-| `contexts/AuthContext.tsx` | Central auth state: `user`, `token`, `loading`; `login()`, `register()` (auto-login after register), `logout()`; bootstraps from `localStorage` on mount by calling `GET /api/v1/auth/me` |
-| `hooks/useAuth.ts` | `useAuth()` — consumes `AuthContext`; throws if used outside `AuthProvider` |
-| `index.css` | Tailwind v4 entry: `@import "tailwindcss"` + base layer (font, link, button resets) |
-| `components/Icons.tsx` | SVG icon components: `ButterflyLogo`, `EyeIcon`, `EyeOffIcon`, `ArrowLeftIcon`, `GoogleIcon`, `FacebookIcon` |
-| `services/auth.ts` | Raw fetch wrappers: `login()` → `{access_token}`, `register()` → `UserOut`, `getMe(token)` → `UserOut`; exports `ApiError`, `UserOut`, `RegisterPayload` |
-| `pages/Login.tsx` | Login form; uses `useAuth().login()`; maps `"Invalid email or password"` to Vietnamese |
-| `pages/SignUp.tsx` | SignUp form (fullname, username, email, password); uses `useAuth().register()`; client-side password ≥8 chars; maps API conflict errors to per-field messages |
-| `pages/Success.tsx` | Shows logged-in user's fullname/username/email and a logout button |
-
-### Tailwind CSS v4
-
-- Setup: `@tailwindcss/vite` plugin in `vite.config.ts` — no `tailwind.config.*` file needed
-- Entry: `@import "tailwindcss"` in `index.css`
-- Conditional classes: `clsx` — e.g. `clsx(inputBase, error ? 'border-red-500' : 'border-[#E0E0E0]')`
-- Complex gradients use inline `style` props (arbitrary radial/linear gradients aren't fully expressible in Tailwind utilities)
-
-### Auth identity flow
-
-Token stored in `localStorage` key `access_token`. On any page load, `AuthContext` reads the stored token and calls `GET /api/v1/auth/me` to restore the session — if the token is expired or invalid it is cleared automatically.
-
-To call authenticated APIs from any component:
-```typescript
-const { token } = useAuth()
-fetch('/api/v1/some/endpoint', {
-  headers: { Authorization: `Bearer ${token}` }
-})
+docs/
+├── index/
+│   ├── feature-map.md    ← keyword → feature → files to read
+│   └── task-map.md       ← task → ordered reading list
+├── features/
+│   ├── auth/             overview, api, flows
+│   ├── backend/          overview, flows
+│   ├── database/         overview, schema
+│   └── frontend/         overview, conventions
+└── shared/
+    ├── architecture.md   monorepo layout, ports
+    ├── conventions.md    language, naming, patterns
+    └── setup.md          install, env, docker, makefile
 ```
 
-Vite dev proxy forwards `/api/*` → `http://localhost:8000` — no CORS issues in development.
+### How to update docs
 
-Social login buttons (Google, Facebook) are rendered but non-functional: `disabled` + `pointer-events: none`.
+- One file = one purpose. Do not mix flows + API + notes in a single file.
+- When adding a new feature: create `docs/features/<name>/overview.md` at minimum, then `api.md` / `flows.md` as needed.
+- Update `docs/index/feature-map.md` to add the new feature's keywords and file pointers.
+- Update `docs/index/task-map.md` if the new feature introduces a common workflow.
+- Keep files under ~300 lines. Split if they grow beyond that.
+- Add frontmatter to every doc file:
+  ```
+  ---
+  feature: <name>
+  doc_type: overview | api | flows | schema | conventions | architecture | setup | index
+  tags: [keyword1, keyword2]
+  ---
+  ```
 
-Terms & Condition checkbox: error state uses `clsx` to toggle `border-red-500` / `text-red-500` classes on the row.
+## Quality Rules
 
-### Adding a new API endpoint
-
-1. Create model in `backend/app/models/<name>.py` (inherit `Base`, `UUIDMixin`)
-2. Add import to `backend/app/db/base.py`
-3. Add Pydantic schema in `backend/app/schemas/<name>.py`
-4. Add CRUD functions in `backend/app/crud/<name>.py`
-5. Create router in `backend/app/api/v1/endpoints/<name>.py`
-6. Register router in `backend/app/api/v1/router.py`
-7. `make makemigrations msg="add_<name>"` then `make migrate`
+- Do not add features, refactor, or "improve" code beyond what was asked.
+- Do not add error handling for impossible cases — trust framework guarantees.
+- Do not create helpers for one-time operations.
+- Do not delete information from docs unless it is clearly redundant with content already moved elsewhere.
