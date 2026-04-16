@@ -15,6 +15,9 @@ users
 ├── addresses       (FK: user_id → users.id)
 └── reviews         (FK: user_id → users.id)
 
+stores
+└── products        (FK: store_id → stores.id)
+
 brands
 └── categories      (FK: brand_id → brands.id)
     └── products    (FK: category_id → categories.id)
@@ -23,14 +26,15 @@ brands
         └── reviews      (FK: product_id → products.id)
 ```
 
-## All 9 Tables
+## All 10 Tables
 
 | Table | Primary FK(s) |
 |---|---|
 | `users` | — |
+| `stores` | — |
 | `brands` | — |
 | `categories` | `brand_id → brands.id` |
-| `products` | `category_id → categories.id` |
+| `products` | `category_id → categories.id`, `store_id → stores.id` |
 | `orders` | `user_id → users.id` |
 | `order_items` | `order_id → orders.id`, `product_id → products.id` |
 | `cart_items` | `user_id → users.id`, `product_id → products.id` |
@@ -44,6 +48,7 @@ Each table has a corresponding model file in `backend/app/models/`:
 ```
 backend/app/models/
 ├── user.py
+├── store.py
 ├── brand.py
 ├── category.py
 ├── product.py
@@ -54,7 +59,9 @@ backend/app/models/
 └── review.py
 ```
 
-All models inherit `Base` + `UUIDMixin` (string UUID PK, auto-generated).
+All models inherit `Base` + `UUIDMixin` + `TimestampMixin` (string UUID PK, auto-generated, with `created_at`/`updated_at`).
+
+All 10 tables have corresponding CRUD (`backend/app/crud/`) and schema (`backend/app/schemas/`) modules. See `docs/features/backend/overview.md` for the full coverage table.
 
 ## Adding a Table
 

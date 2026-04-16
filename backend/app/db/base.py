@@ -9,3 +9,4 @@ from app.models.order_item import OrderItem  # noqa: F401
 from app.models.cart_item import CartItem  # noqa: F401
 from app.models.address import Address  # noqa: F401
 from app.models.review import Review  # noqa: F401
+from app.models.store import Store  # noqa: F401

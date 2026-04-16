@@ -22,7 +22,7 @@ Use this file to find the right docs for a given question. Match your keyword to
 ---
 
 ## backend
-**Keywords:** FastAPI, endpoint, router, CRUD, SQLAlchemy, model, schema, Pydantic, dependency, Depends, venv, uvicorn, main.py, alembic, migration
+**Keywords:** FastAPI, endpoint, router, CRUD, SQLAlchemy, model, schema, Pydantic, dependency, Depends, venv, uvicorn, main.py, alembic, migration, store, product, brand, category, order, cart, review
 
 | Question type | Read |
 |---|---|
@@ -31,6 +31,7 @@ Use this file to find the right docs for a given question. Match your keyword to
 | How do migrations work? | `docs/features/backend/flows.md` |
 | What packages are used? | `docs/features/backend/overview.md` |
 | How do I register a new model? | `docs/features/backend/overview.md` |
+| Which tables have CRUD/schemas? | `docs/features/backend/overview.md` |
 
 ---
 
@@ -61,10 +62,11 @@ Use this file to find the right docs for a given question. Match your keyword to
 ---
 
 ## setup / architecture
-**Keywords:** install, docker, makefile, .env, port, monorepo, quick start, requirements
+**Keywords:** install, docker, makefile, .env, port, monorepo, quick start, requirements, seed, mock, csv, json
 
 | Question type | Read |
 |---|---|
 | How do I set up the project? | `docs/shared/setup.md` |
 | What is the overall architecture? | `docs/shared/architecture.md` |
 | What are the conventions / rules? | `docs/shared/conventions.md` |
+| How do I seed mock data? | `docs/shared/setup.md` |

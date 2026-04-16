@@ -63,6 +63,20 @@ make docker-down                # Stop Docker services
 
 Backend commands execute via `backend/venv/bin/` — never assume a globally activated venv.
 
+## Seed Mock Data
+
+After migrations, seed the database with mock data for development. Run in order:
+
+```bash
+backend/venv/bin/python mock/seed_users.py       # 100 users → mock/users.csv
+backend/venv/bin/python mock/seed_addresses.py    # 1–3 addresses/user → mock/addresses.csv
+backend/venv/bin/python mock/seed_stores.py       # 20 stores → mock/stores.csv
+backend/venv/bin/python mock/seed_products.py     # ~9,350 products (from mock/products.json)
+backend/venv/bin/python mock/seed_reviews.py      # 100–500 reviews/product (from mock/generic_review_sentiment_1200.json)
+```
+
+Scripts are idempotent (skip existing records). Credentials exported to CSV in `mock/`.
+
 ## Stop Docker
 
 ```bash

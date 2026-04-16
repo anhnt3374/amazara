@@ -24,6 +24,26 @@ FastAPI + SQLAlchemy ORM + Alembic + python-jose + bcrypt. All source code under
 | CRUD | `crud/` | Plain functions accepting `Session`; no repository class pattern |
 | API | `api/v1/endpoints/` | FastAPI routers; mounted via `api/v1/router.py` at prefix `/api/v1` |
 
+## CRUD & Schema Coverage
+
+All 10 tables have both CRUD (`crud/`) and schema (`schemas/`) modules:
+
+| Entity | CRUD | Schema | API Router |
+|---|---|---|---|
+| user | `crud/user.py` | `schemas/user.py` | `endpoints/auth.py` |
+| address | `crud/address.py` | `schemas/address.py` | `endpoints/address.py` |
+| store | `crud/store.py` | `schemas/store.py` | — |
+| brand | `crud/brand.py` | `schemas/brand.py` | — |
+| category | `crud/category.py` | `schemas/category.py` | — |
+| product | `crud/product.py` | `schemas/product.py` | — |
+| order | `crud/order.py` | `schemas/order.py` | — |
+| cart_item | `crud/cart_item.py` | `schemas/cart_item.py` | — |
+| review | `crud/review.py` | `schemas/review.py` | — |
+
+Schema naming: `{Model}Create`, `{Model}Update` (all fields optional), `{Model}Out` (with `from_attributes`).
+
+CRUD naming: `create_{model}`, `get_{model}_by_id`, `get_{models}_by_{field}`, `update_{model}`, `delete_{model}`.
+
 ## Key Rules
 
 - `main.py` **must** import `app.db.base` before anything that uses ORM models — ensures mapper resolution before the first request

@@ -1,10 +1,10 @@
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, UUIDMixin
+from app.models.base import Base, TimestampMixin, UUIDMixin
 
 
-class CartItem(Base, UUIDMixin):
+class CartItem(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "cart_items"
 
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)

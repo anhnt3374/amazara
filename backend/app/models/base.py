@@ -1,6 +1,7 @@
 import uuid
+from datetime import datetime
 
-from sqlalchemy import String
+from sqlalchemy import String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -15,4 +16,11 @@ def generate_uuid() -> str:
 class UUIDMixin:
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=generate_uuid
+    )
+
+
+class TimestampMixin:
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        server_default=func.now(), onupdate=func.now()
     )

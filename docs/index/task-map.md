@@ -80,6 +80,13 @@ Use this file when you have a concrete task. Each entry lists the exact files to
 
 ---
 
+## Seed Mock Data
+
+**Task:** Populate the database with test data for development
+1. `docs/shared/setup.md` — seed commands and run order
+
+---
+
 ## Understand Project Conventions
 
 **Task:** Language rules, naming, patterns, model/schema/CRUD structure

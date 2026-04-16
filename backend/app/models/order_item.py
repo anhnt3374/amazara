@@ -1,10 +1,10 @@
 from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, UUIDMixin
+from app.models.base import Base, TimestampMixin, UUIDMixin
 
 
-class OrderItem(Base, UUIDMixin):
+class OrderItem(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "order_items"
 
     order_id: Mapped[str] = mapped_column(String(36), ForeignKey("orders.id"), nullable=False)

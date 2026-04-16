@@ -9,6 +9,8 @@ shope/
 ├── frontend/          # React + Vite + TypeScript
 ├── backend/           # Python + FastAPI + SQLAlchemy + Alembic
 ├── infra/             # docker-compose.yml
+├── mock/              # Seed scripts + CSV/JSON data
+├── docs/              # Feature docs, indexes, shared conventions
 ├── Makefile           # Shortcuts for common tasks
 ├── .env.example       # Environment variable template
 └── README.md
@@ -125,8 +127,8 @@ make migrate
 alembic upgrade head
 ```
 
-This creates all 9 tables in MySQL:
-`users`, `brands`, `categories`, `products`, `orders`, `order_items`, `cart_items`, `addresses`, `reviews`
+This creates all 10 tables in MySQL:
+`users`, `stores`, `brands`, `categories`, `products`, `orders`, `order_items`, `cart_items`, `addresses`, `reviews`
 
 To generate a new migration after changing a model:
 
@@ -150,7 +152,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - API docs (Swagger UI): http://localhost:8000/docs
 - Health check: http://localhost:8000/health
 
-### Auth API
+### API Endpoints
 
 | Method | Endpoint | Description |
 |---|---|---|
@@ -158,6 +160,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 | POST | `/api/v1/auth/login` | Log in and receive a JWT token |
 | POST | `/api/v1/auth/logout` | Log out (client discards token) |
 | GET  | `/api/v1/auth/me` | Get current user info (Bearer token required) |
+| CRUD | `/api/v1/addresses` | User addresses (create, list, get, update, delete) |
 
 **Register example:**
 
@@ -197,6 +200,22 @@ cd frontend && npm install && npm run dev
 Frontend runs at: http://localhost:5173
 
 Vite is configured with a proxy: all requests to `/api/*` are forwarded to `http://localhost:8000`.
+
+---
+
+## Seed Mock Data (Optional)
+
+After running migrations, you can populate the database with mock data for development:
+
+```bash
+backend/venv/bin/python mock/seed_users.py       # 100 users
+backend/venv/bin/python mock/seed_addresses.py    # 1–3 addresses per user
+backend/venv/bin/python mock/seed_stores.py       # 20 stores
+backend/venv/bin/python mock/seed_products.py     # ~9,350 products (random store assignment)
+backend/venv/bin/python mock/seed_reviews.py      # 100–500 reviews per product
+```
+
+Scripts are idempotent — they skip records that already exist. Credentials are exported to CSV files in `mock/`.
 
 ---
 

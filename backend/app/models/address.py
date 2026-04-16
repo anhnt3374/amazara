@@ -1,10 +1,10 @@
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, UUIDMixin
+from app.models.base import Base, TimestampMixin, UUIDMixin
 
 
-class Address(Base, UUIDMixin):
+class Address(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "addresses"
 
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
