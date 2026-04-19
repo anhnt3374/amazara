@@ -17,6 +17,24 @@ def create_cart_item(db: Session, user_id: str, data: CartItemCreate) -> CartIte
     return cart_item
 
 
+def add_or_increment_cart_item(
+    db: Session, user_id: str, data: CartItemCreate
+) -> CartItem:
+    existing = (
+        db.query(CartItem)
+        .filter(CartItem.user_id == user_id, CartItem.product_id == data.product_id)
+        .first()
+    )
+    if existing:
+        existing.quantity = existing.quantity + data.quantity
+        if data.notes is not None:
+            existing.notes = data.notes
+        db.commit()
+        db.refresh(existing)
+        return existing
+    return create_cart_item(db, user_id=user_id, data=data)
+
+
 def get_cart_item_by_id(db: Session, cart_item_id: str) -> CartItem | None:
     return db.query(CartItem).filter(CartItem.id == cart_item_id).first()
 

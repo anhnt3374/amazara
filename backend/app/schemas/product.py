@@ -1,5 +1,8 @@
 from pydantic import BaseModel
 
+from app.schemas.brand import BrandOut
+from app.schemas.category import CategoryOut
+
 
 class ProductCreate(BaseModel):
     name: str
@@ -34,3 +37,20 @@ class ProductOut(BaseModel):
     store_id: str
 
     model_config = {"from_attributes": True}
+
+
+class ProductDetailOut(ProductOut):
+    category_name: str | None
+    brand_name: str | None
+    review_count: int
+    average_rating: float | None
+    is_favorited: bool
+
+
+class ProductSearchResponse(BaseModel):
+    products: list[ProductOut]
+    total: int
+    page: int
+    page_size: int
+    available_brands: list[BrandOut]
+    available_categories: list[CategoryOut]

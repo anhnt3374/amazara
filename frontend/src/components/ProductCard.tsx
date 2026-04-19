@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { Product } from '../types/product'
 import { ChevronLeftIcon, ChevronRightIcon } from './Icons'
 
@@ -15,6 +16,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     : null
 
   function prevImage(e: React.MouseEvent) {
+    e.preventDefault()
     e.stopPropagation()
     setCurrentImageIndex(i =>
       i === 0 ? product.images.length - 1 : i - 1
@@ -22,6 +24,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   }
 
   function nextImage(e: React.MouseEvent) {
+    e.preventDefault()
     e.stopPropagation()
     setCurrentImageIndex(i =>
       i === product.images.length - 1 ? 0 : i + 1
@@ -29,9 +32,9 @@ export default function ProductCard({ product }: ProductCardProps) {
   }
 
   return (
-    <div className="group cursor-pointer">
+    <Link to={`/product/${product.id}`} className="group cursor-pointer block">
       {/* Image container */}
-      <div className="relative aspect-square bg-[#f5f5f5] rounded-lg overflow-hidden">
+      <div className="relative aspect-square bg-fog rounded-pin-md overflow-hidden">
         <img
           src={product.images[currentImageIndex]}
           alt={product.name}
@@ -40,7 +43,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Discount tag */}
         {product.discount > 0 && (
-          <span className="absolute top-3 left-3 bg-[#111] text-white text-xs font-semibold px-2 py-1 rounded">
+          <span className="absolute top-3 left-3 bg-brand-red text-white text-xs font-semibold px-2 py-1 rounded-pin-sm">
             {product.discount}% OFF
           </span>
         )}
@@ -50,13 +53,13 @@ export default function ProductCard({ product }: ProductCardProps) {
           <>
             <button
               onClick={prevImage}
-              className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/85 hover:bg-white text-plum rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
             >
               <ChevronLeftIcon />
             </button>
             <button
               onClick={nextImage}
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/85 hover:bg-white text-plum rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
             >
               <ChevronRightIcon />
             </button>
@@ -70,7 +73,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               <span
                 key={idx}
                 className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                  idx === currentImageIndex ? 'bg-[#111]' : 'bg-white/60'
+                  idx === currentImageIndex ? 'bg-brand-red' : 'bg-white/70'
                 }`}
               />
             ))}
@@ -80,24 +83,24 @@ export default function ProductCard({ product }: ProductCardProps) {
 
       {/* Product info */}
       <div className="mt-3">
-        <h3 className="text-sm font-medium text-[#111] line-clamp-2">{product.name}</h3>
+        <h3 className="text-sm font-medium text-plum line-clamp-2">{product.name}</h3>
         <div className="mt-1 flex items-center gap-2">
           {discountedPrice !== null ? (
             <>
-              <span className="text-sm font-semibold text-red-600">
+              <span className="text-sm font-semibold text-brand-red">
                 {discountedPrice.toLocaleString('vi-VN')} &#8363;
               </span>
-              <span className="text-sm text-[#757575] line-through">
+              <span className="text-sm text-warm-silver line-through">
                 {product.price.toLocaleString('vi-VN')} &#8363;
               </span>
             </>
           ) : (
-            <span className="text-sm font-medium text-[#111]">
+            <span className="text-sm font-medium text-plum">
               {product.price.toLocaleString('vi-VN')} &#8363;
             </span>
           )}
         </div>
       </div>
-    </div>
+    </Link>
   )
 }

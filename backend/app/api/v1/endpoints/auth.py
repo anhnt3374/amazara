@@ -11,6 +11,7 @@ from app.schemas.user import LoginRequest, RegisterRequest, Token, UserOut
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 _bearer = HTTPBearer()
+_bearer_optional = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
@@ -30,6 +31,18 @@ def get_current_user(
             detail="User not found",
         )
     return user
+
+
+def get_current_user_optional(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_optional),
+    db: Session = Depends(get_db),
+) -> User | None:
+    if not credentials:
+        return None
+    user_id = decode_access_token(credentials.credentials)
+    if not user_id:
+        return None
+    return db.query(User).filter(User.id == user_id).first()
 
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)

@@ -1,68 +1,66 @@
-import { useState, useMemo } from 'react'
-import type { Product, Brand, Category, ProductFilters } from '../types/product'
+import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import type { Product, Brand, Category, ProductFilters, SortOption } from '../types/product'
+import { searchProducts } from '../services/product'
 
-const DEFAULT_FILTERS: ProductFilters = {
-  priceRange: null,
-  brandId: null,
-  categoryId: null,
-  sort: 'best-sellers',
-}
+export function useProductFilters() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [products, setProducts] = useState<Product[]>([])
+  const [total, setTotal] = useState(0)
+  const [availableBrands, setAvailableBrands] = useState<Brand[]>([])
+  const [availableCategories, setAvailableCategories] = useState<Category[]>([])
+  const [loading, setLoading] = useState(false)
 
-export function useProductFilters(
-  allProducts: Product[],
-  brands: Brand[],
-  categories: Category[],
-) {
-  const [filters, setFilters] = useState<ProductFilters>(DEFAULT_FILTERS)
+  const filters: ProductFilters = useMemo(() => ({
+    search: searchParams.get('search') ?? '',
+    priceRange: null,
+    brandIds: searchParams.getAll('brand_ids'),
+    categoryIds: searchParams.getAll('category_ids'),
+    sort: (searchParams.get('sort') ?? 'best-sellers') as SortOption,
+    page: Number(searchParams.get('page') ?? 1),
+  }), [searchParams])
 
-  const filteredProducts = useMemo(() => {
-    let result = [...allProducts]
+  const paramsKey = searchParams.toString()
 
-    // Filter by price range
-    if (filters.priceRange) {
-      const [min, max] = filters.priceRange
-      result = result.filter(p => p.price >= min && p.price <= max)
-    }
+  useEffect(() => {
+    setLoading(true)
+    searchProducts({
+      search: filters.search || undefined,
+      brandIds: filters.brandIds.length ? filters.brandIds : undefined,
+      categoryIds: filters.categoryIds.length ? filters.categoryIds : undefined,
+      page: filters.page,
+      sort: filters.sort,
+    })
+      .then(data => {
+        setProducts(data.products)
+        setTotal(data.total)
+        setAvailableBrands(data.availableBrands)
+        setAvailableCategories(data.availableCategories)
+      })
+      .catch(() => {
+        setProducts([])
+        setTotal(0)
+      })
+      .finally(() => setLoading(false))
+  }, [paramsKey])
 
-    // Filter by brand (through categories)
-    if (filters.brandId) {
-      const brandCategoryIds = categories
-        .filter(c => c.brandId === filters.brandId)
-        .map(c => c.id)
-      result = result.filter(p => brandCategoryIds.includes(p.categoryId))
-    }
-
-    // Filter by category
-    if (filters.categoryId) {
-      result = result.filter(p => p.categoryId === filters.categoryId)
-    }
-
-    // Sort
-    switch (filters.sort) {
-      case 'newest':
-        result.reverse()
-        break
-      case 'price-high-low':
-        result.sort((a, b) => b.price - a.price)
-        break
-      case 'price-low-high':
-        result.sort((a, b) => a.price - b.price)
-        break
-      case 'discount-rate':
-        result.sort((a, b) => b.discount - a.discount)
-        break
-      case 'best-sellers':
-      default:
-        break
-    }
-
-    return result
-  }, [allProducts, categories, filters])
+  function setFilters(next: ProductFilters) {
+    const params = new URLSearchParams()
+    if (next.search) params.set('search', next.search)
+    next.brandIds.forEach(id => params.append('brand_ids', id))
+    next.categoryIds.forEach(id => params.append('category_ids', id))
+    if (next.sort !== 'best-sellers') params.set('sort', next.sort)
+    if (next.page > 1) params.set('page', String(next.page))
+    setSearchParams(params, { replace: true })
+  }
 
   return {
     filters,
     setFilters,
-    filteredProducts,
-    productCount: filteredProducts.length,
+    products,
+    total,
+    availableBrands,
+    availableCategories,
+    loading,
   }
 }

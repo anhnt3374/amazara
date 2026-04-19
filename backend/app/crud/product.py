@@ -1,5 +1,9 @@
+import math
+
 from sqlalchemy.orm import Session
 
+from app.models.brand import Brand
+from app.models.category import Category
 from app.models.product import Product
 from app.schemas.product import ProductCreate, ProductUpdate
 
@@ -49,3 +53,99 @@ def update_product(db: Session, product: Product, data: ProductUpdate) -> Produc
 def delete_product(db: Session, product: Product) -> None:
     db.delete(product)
     db.commit()
+
+
+PAGE_SIZE = 20
+MAX_TOTAL = 500
+
+
+def _apply_search(query, search: str | None):
+    if search:
+        term = search.replace("%", "\\%").replace("_", "\\_")
+        query = query.filter(Product.description.ilike(f"%{term}%"))
+    return query
+
+
+def search_products(
+    db: Session,
+    search: str | None = None,
+    brand_ids: list[str] | None = None,
+    category_ids: list[str] | None = None,
+    sort: str = "best-sellers",
+    page: int = 1,
+) -> dict:
+    # --- base query with all filters ---
+    base = db.query(Product)
+    base = _apply_search(base, search)
+
+    if category_ids:
+        base = base.filter(Product.category_id.in_(category_ids))
+    if brand_ids:
+        base = base.join(Category, Product.category_id == Category.id).filter(
+            Category.brand_id.in_(brand_ids)
+        )
+
+    # --- total (capped at 500) ---
+    total = min(base.count(), MAX_TOTAL)
+
+    # --- sort ---
+    if sort == "newest":
+        base = base.order_by(Product.created_at.desc())
+    elif sort == "price-high-low":
+        base = base.order_by(Product.price.desc())
+    elif sort == "price-low-high":
+        base = base.order_by(Product.price.asc())
+    elif sort == "discount-rate":
+        base = base.order_by(Product.discount.desc())
+
+    # --- paginate ---
+    max_page = max(math.ceil(total / PAGE_SIZE), 1)
+    page = min(page, max_page)
+    products = base.offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).all()
+
+    # --- available brands (filtered by search + category_ids, NOT brand_ids) ---
+    brand_base = db.query(Product.category_id).distinct()
+    brand_base = _apply_search(brand_base, search)
+    if category_ids:
+        brand_base = brand_base.filter(Product.category_id.in_(category_ids))
+
+    cat_ids_for_brands = [r[0] for r in brand_base.all() if r[0] is not None]
+    if cat_ids_for_brands:
+        brand_id_rows = (
+            db.query(Category.brand_id)
+            .filter(Category.id.in_(cat_ids_for_brands))
+            .distinct()
+            .all()
+        )
+        available_brand_ids = [r[0] for r in brand_id_rows if r[0] is not None]
+        available_brands = (
+            db.query(Brand).filter(Brand.id.in_(available_brand_ids)).all()
+            if available_brand_ids
+            else []
+        )
+    else:
+        available_brands = []
+
+    # --- available categories (filtered by search + brand_ids, NOT category_ids) ---
+    cat_base = db.query(Product.category_id).distinct()
+    cat_base = _apply_search(cat_base, search)
+    if brand_ids:
+        cat_base = cat_base.join(Category, Product.category_id == Category.id).filter(
+            Category.brand_id.in_(brand_ids)
+        )
+
+    cat_id_rows = [r[0] for r in cat_base.all() if r[0] is not None]
+    available_categories = (
+        db.query(Category).filter(Category.id.in_(cat_id_rows)).all()
+        if cat_id_rows
+        else []
+    )
+
+    return {
+        "products": products,
+        "total": total,
+        "page": page,
+        "page_size": PAGE_SIZE,
+        "available_brands": available_brands,
+        "available_categories": available_categories,
+    }

@@ -1,16 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { BagIcon, HeartIcon, JordanLogo, NikeSwoosh, SearchIcon } from './Icons'
+import { BagIcon, HeartIcon, JordanLogo, SearchIcon } from './Icons'
 
 const NAV_ITEMS = ['New & Featured', 'Men', 'Women', 'Kids', 'Sale']
-
-const PAGE_NAMES: Record<string, string> = {
-  '/': 'Home',
-  '/success': 'Profile',
-  '/favorites': 'Favorites',
-  '/cart': 'Cart',
-}
 
 const DROPDOWN_DATA: Record<string, { title: string; items: string[] }[]> = {
   'New & Featured': [
@@ -122,11 +115,11 @@ export default function Header() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const currentPage = PAGE_NAMES[location.pathname] ?? ''
   const [scrolled, setScrolled] = useState(false)
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchClosing, setSearchClosing] = useState(false)
+  const [searchValue, setSearchValue] = useState('')
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
@@ -149,6 +142,23 @@ export default function Header() {
 
   function closeSearch() {
     setSearchClosing(true)
+    setSearchValue('')
+  }
+
+  function handleSearchSubmit() {
+    const term = searchValue.trim()
+    if (!term) return
+    navigate(`/list?search=${encodeURIComponent(term)}`)
+    setSearchValue('')
+    setSearchOpen(false)
+    setSearchClosing(false)
+  }
+
+  function handlePopularSearch(term: string) {
+    navigate(`/list?search=${encodeURIComponent(term)}`)
+    setSearchValue('')
+    setSearchOpen(false)
+    setSearchClosing(false)
   }
 
   function handleSearchAnimEnd() {
@@ -190,28 +200,28 @@ export default function Header() {
           className="overflow-hidden transition-all duration-300 ease-in-out"
           style={{ maxHeight: scrolled ? '0' : '32px', opacity: scrolled ? 0 : 1 }}
         >
-          <div className="bg-[#f5f5f5] flex items-center justify-between px-12 h-8">
-            <JordanLogo className="w-5 h-5 text-black" />
-            <div className="flex items-center gap-4 text-xs text-[#111]">
-              <Link to="/" className="hover:underline">Find a Store</Link>
-              <span className="text-[#ccc]">|</span>
-              <Link to="/" className="hover:underline">Help</Link>
-              <span className="text-[#ccc]">|</span>
-              <Link to="/login" className="hover:underline font-medium">Sign In</Link>
+          <div className="bg-fog flex items-center justify-between px-12 h-8">
+            <JordanLogo className="w-5 h-5 text-plum" />
+            <div className="flex items-center gap-4 text-xs text-olive">
+              <Link to="/" className="hover:underline hover:text-plum">Find a Store</Link>
+              <span className="text-warm-silver">|</span>
+              <Link to="/" className="hover:underline hover:text-plum">Help</Link>
+              <span className="text-warm-silver">|</span>
+              <Link to="/login" className="hover:underline font-medium text-plum">Sign In</Link>
             </div>
           </div>
         </div>
 
         {/* MAIN NAV */}
         <div
-          className="bg-[#111] transition-shadow duration-200"
-          style={{ position: scrolled ? 'fixed' : 'relative', top: 0, left: 0, right: 0, zIndex: 40, boxShadow: scrolled && location.pathname !== '/list' ? '0 1px 4px rgba(0,0,0,0.25)' : 'none' }}
+          className="bg-white border-b border-sand transition-shadow duration-200"
+          style={{ position: scrolled ? 'fixed' : 'relative', top: 0, left: 0, right: 0, zIndex: 40, boxShadow: scrolled && location.pathname !== '/list' ? '0 1px 4px rgba(33,25,34,0.08)' : 'none' }}
         >
           <div className="relative flex items-center px-12 h-[46px]">
             {/* Nike logo — left */}
             <div className="flex-1 flex items-center">
-              <Link to="/" className="flex-shrink-0">
-                <svg width="50" height="18" viewBox="0 0 60 22" fill="white" xmlns="http://www.w3.org/2000/svg">
+              <Link to="/" className="flex-shrink-0 text-plum">
+                <svg width="50" height="18" viewBox="0 0 60 22" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                   <path d="M57.6 0.6L18.2 16.4C14.8 17.8 11.9 18.4 9.6 18.4C6.8 18.4 4.8 17.4 3.8 15.6C2.4 13.2 3.2 9.4 5.8 6.4C4 8 3 10.2 3.4 12C3.8 13.6 5.2 14.6 7.2 14.6C8.8 14.6 10.8 14.2 13.2 13.2L60 0L57.6 0.6Z" />
                 </svg>
               </Link>
@@ -229,8 +239,8 @@ export default function Header() {
                   <button
                     className={`text-sm font-medium pb-1 border-b-2 transition-colors duration-150 ${
                       hoveredItem === item
-                        ? 'border-white text-white'
-                        : 'border-transparent text-[#ccc] hover:text-white'
+                        ? 'border-brand-red text-plum'
+                        : 'border-transparent text-olive hover:text-plum'
                     }`}
                   >
                     {item}
@@ -244,15 +254,15 @@ export default function Header() {
               {/* Search */}
               <button
                 onClick={() => setSearchOpen(true)}
-                className="flex items-center gap-2 bg-[#333] rounded-full pl-3 pr-4 py-1.5 text-sm font-medium text-white hover:bg-[#444] transition-colors"
+                className="flex items-center gap-2 bg-fog rounded-pin pl-3 pr-4 py-1.5 text-sm font-medium text-plum hover:bg-warm-light transition-colors"
               >
-                <SearchIcon className="text-white w-4 h-4" />
+                <SearchIcon className="text-plum w-4 h-4" />
                 <span>Search</span>
               </button>
               {/* Heart */}
               <button
                 onClick={() => handleProtectedNav('/favorites')}
-                className="p-1.5 rounded-full hover:bg-[#333] transition-colors text-white"
+                className="w-9 h-9 rounded-full hover:bg-fog transition-colors text-plum flex items-center justify-center"
                 aria-label="Favorites"
               >
                 <HeartIcon />
@@ -260,7 +270,7 @@ export default function Header() {
               {/* Bag */}
               <button
                 onClick={() => handleProtectedNav('/cart')}
-                className="p-1.5 rounded-full hover:bg-[#333] transition-colors text-white"
+                className="w-9 h-9 rounded-full hover:bg-fog transition-colors text-plum flex items-center justify-center"
                 aria-label="Cart"
               >
                 <BagIcon />
@@ -271,7 +281,7 @@ export default function Header() {
           {/* DROPDOWN */}
           {hoveredItem && dropdownColumns && (
             <div
-              className="absolute left-0 right-0 bg-white border-t border-[#e5e5e5] shadow-lg"
+              className="absolute left-0 right-0 bg-white border-t border-sand shadow-lg"
               style={{ top: '100%' }}
               onMouseEnter={handleDropdownEnter}
               onMouseLeave={handleDropdownLeave}
@@ -279,11 +289,11 @@ export default function Header() {
               <div className="max-w-6xl mx-auto px-8 py-8 grid grid-cols-4 gap-8">
                 {dropdownColumns.map(col => (
                   <div key={col.title}>
-                    <h4 className="text-xs font-semibold uppercase tracking-wide text-[#757575] mb-3">{col.title}</h4>
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-olive mb-3">{col.title}</h4>
                     <ul className="space-y-1.5">
                       {col.items.map(item => (
                         <li key={item}>
-                          <a href="#" className="text-sm text-[#111] hover:underline">{item}</a>
+                          <a href="#" className="text-sm text-plum hover:text-brand-red hover:underline">{item}</a>
                         </li>
                       ))}
                     </ul>
@@ -294,16 +304,6 @@ export default function Header() {
           )}
         </div>
 
-        {/* BOTTOM BAR */}
-        <div
-          className="overflow-hidden transition-all duration-300 ease-in-out"
-          style={{ maxHeight: scrolled ? '0' : '40px', opacity: scrolled ? 0 : 1 }}
-        >
-          <div className="bg-[#f5f5f5] flex items-center justify-center h-10 text-xs text-[#111]">
-            {currentPage}
-          </div>
-        </div>
-
         {/* Spacer when nav is fixed */}
         {scrolled && <div style={{ height: '46px' }} />}
       </header>
@@ -312,7 +312,7 @@ export default function Header() {
       {hoveredItem && (
         <div
           className="fixed inset-0 z-30 pointer-events-none transition-opacity duration-150"
-          style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
+          style={{ backgroundColor: 'rgba(33,25,34,0.18)' }}
         />
       )}
 
@@ -339,22 +339,25 @@ export default function Header() {
             }}
           >
             {/* Top row: logo + search input + cancel */}
-            <div className="flex items-center gap-5 px-6 sm:px-10 lg:px-16 pt-5 pb-4 border-b border-[#e5e5e5]">
-              <svg width="52" height="20" viewBox="0 0 60 22" fill="black" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
+            <div className="flex items-center gap-5 px-6 sm:px-10 lg:px-16 pt-5 pb-4 border-b border-sand">
+              <svg width="52" height="20" viewBox="0 0 60 22" fill="currentColor" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0 text-plum">
                 <path d="M57.6 0.6L18.2 16.4C14.8 17.8 11.9 18.4 9.6 18.4C6.8 18.4 4.8 17.4 3.8 15.6C2.4 13.2 3.2 9.4 5.8 6.4C4 8 3 10.2 3.4 12C3.8 13.6 5.2 14.6 7.2 14.6C8.8 14.6 10.8 14.2 13.2 13.2L60 0L57.6 0.6Z" />
               </svg>
-              <div className="flex items-center gap-3 flex-1 bg-[#f5f5f5] rounded-full px-4 py-2.5">
-                <SearchIcon className="text-[#757575] w-5 h-5 flex-shrink-0" />
+              <div className="flex items-center gap-3 flex-1 bg-fog rounded-pin px-4 py-2.5">
+                <SearchIcon className="text-olive w-5 h-5 flex-shrink-0" />
                 <input
                   ref={searchInputRef}
                   type="text"
                   placeholder="Search"
-                  className="flex-1 text-base outline-none border-none bg-transparent text-[#111] placeholder-[#757575]"
+                  value={searchValue}
+                  onChange={e => setSearchValue(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSearchSubmit() }}
+                  className="flex-1 text-base outline-none border-none bg-transparent text-plum placeholder-warm-silver"
                 />
               </div>
               <button
                 onClick={closeSearch}
-                className="text-sm font-medium text-[#111] hover:underline flex-shrink-0 ml-1"
+                className="text-sm font-medium text-plum hover:text-brand-red hover:underline flex-shrink-0 ml-1"
               >
                 Cancel
               </button>
@@ -362,12 +365,13 @@ export default function Header() {
 
             {/* Popular search terms */}
             <div className="px-6 sm:px-10 lg:px-16 pt-6 pb-6">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#757575] mb-4">Popular Search Terms</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-olive mb-4">Popular Search Terms</p>
               <div className="flex flex-wrap gap-3">
                 {POPULAR_SEARCHES.map(term => (
                   <button
                     key={term}
-                    className="border border-[#e5e5e5] rounded-full px-5 py-2 text-sm text-[#111] hover:border-[#111] transition-colors"
+                    onClick={() => handlePopularSearch(term)}
+                    className="border border-sand rounded-pin px-5 py-2 text-sm text-plum hover:border-plum transition-colors"
                   >
                     {term}
                   </button>
@@ -379,7 +383,7 @@ export default function Header() {
           {/* Backdrop — hidden on mobile (panel covers full screen), visible on desktop */}
           <div
             className="flex-none h-0 lg:flex-1 lg:h-auto cursor-default"
-            style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
+            style={{ backgroundColor: 'rgba(33,25,34,0.18)' }}
             onClick={closeSearch}
           />
         </div>

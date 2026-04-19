@@ -9,6 +9,7 @@ import Home from './pages/Home'
 import Favorites from './pages/Favorites'
 import Cart from './pages/Cart'
 import ProductList from './pages/ProductList'
+import ProductDetail from './pages/ProductDetail'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -32,6 +33,7 @@ export default function App() {
           {/* Pages with Header via Layout */}
           <Route path="/" element={<Layout><Home /></Layout>} />
           <Route path="/list" element={<Layout><ProductList /></Layout>} />
+          <Route path="/product/:productId" element={<Layout><ProductDetail /></Layout>} />
           <Route path="/success" element={<Layout><ProtectedRoute><Success /></ProtectedRoute></Layout>} />
           <Route path="/favorites" element={<Layout><ProtectedRoute><Favorites /></ProtectedRoute></Layout>} />
           <Route path="/cart" element={<Layout><ProtectedRoute><Cart /></ProtectedRoute></Layout>} />

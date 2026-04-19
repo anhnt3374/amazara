@@ -6,8 +6,8 @@ import FilterDropdown from './FilterDropdown'
 interface FilterBarProps {
   filters: ProductFilters
   onFiltersChange: (filters: ProductFilters) => void
-  brands: Brand[]
-  categories: Category[]
+  availableBrands: Brand[]
+  availableCategories: Category[]
 }
 
 const SORT_OPTIONS = [
@@ -18,7 +18,7 @@ const SORT_OPTIONS = [
   { value: 'discount-rate', label: 'Discount Rate' },
 ]
 
-export default function FilterBar({ filters, onFiltersChange, brands, categories }: FilterBarProps) {
+export default function FilterBar({ filters, onFiltersChange, availableBrands, availableCategories }: FilterBarProps) {
   const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
@@ -28,8 +28,8 @@ export default function FilterBar({ filters, onFiltersChange, brands, categories
   }, [])
 
   const priceOptions = PRICE_RANGES.map(r => ({ value: r.value, label: r.label }))
-  const brandOptions = brands.map(b => ({ value: b.id, label: b.name }))
-  const categoryOptions = categories.map(c => ({ value: c.id, label: c.name }))
+  const brandOptions = availableBrands.map(b => ({ value: b.id, label: b.name }))
+  const categoryOptions = availableCategories.map(c => ({ value: c.id, label: c.name }))
 
   const selectedPrice = filters.priceRange
     ? PRICE_RANGES.find(r => r.range[0] === filters.priceRange![0] && r.range[1] === filters.priceRange![1])?.value ?? null
@@ -37,25 +37,25 @@ export default function FilterBar({ filters, onFiltersChange, brands, categories
 
   function handlePriceSelect(value: string | null) {
     const range = value ? PRICE_RANGES.find(r => r.value === value)?.range ?? null : null
-    onFiltersChange({ ...filters, priceRange: range })
+    onFiltersChange({ ...filters, priceRange: range, page: 1 })
   }
 
-  function handleBrandSelect(value: string | null) {
-    onFiltersChange({ ...filters, brandId: value, categoryId: null })
+  function handleBrandSelect(values: string[]) {
+    onFiltersChange({ ...filters, brandIds: values, page: 1 })
   }
 
-  function handleCategorySelect(value: string | null) {
-    onFiltersChange({ ...filters, categoryId: value })
+  function handleCategorySelect(values: string[]) {
+    onFiltersChange({ ...filters, categoryIds: values, page: 1 })
   }
 
   function handleSortSelect(value: string | null) {
-    onFiltersChange({ ...filters, sort: (value ?? 'best-sellers') as SortOption })
+    onFiltersChange({ ...filters, sort: (value ?? 'best-sellers') as SortOption, page: 1 })
   }
 
   return (
     <div
-      className="sticky top-[46px] z-30 bg-white flex items-center justify-between px-12 h-[46px] border-y border-[#e5e5e5]"
-      style={{ boxShadow: scrolled ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}
+      className="sticky top-[46px] z-30 bg-white flex items-center justify-between px-12 h-[46px] border-y border-sand"
+      style={{ boxShadow: scrolled ? '0 1px 4px rgba(33,25,34,0.06)' : 'none' }}
     >
       <div className="flex items-center gap-3">
         <FilterDropdown
@@ -67,14 +67,20 @@ export default function FilterBar({ filters, onFiltersChange, brands, categories
         <FilterDropdown
           label="Brand"
           options={brandOptions}
-          selected={filters.brandId}
-          onSelect={handleBrandSelect}
+          selected={null}
+          onSelect={() => {}}
+          multi
+          selectedMulti={filters.brandIds}
+          onSelectMulti={handleBrandSelect}
         />
         <FilterDropdown
           label="Category"
           options={categoryOptions}
-          selected={filters.categoryId}
-          onSelect={handleCategorySelect}
+          selected={null}
+          onSelect={() => {}}
+          multi
+          selectedMulti={filters.categoryIds}
+          onSelectMulti={handleCategorySelect}
         />
       </div>
       <div>

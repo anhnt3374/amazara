@@ -25,3 +25,4 @@ class Product(Base, UUIDMixin, TimestampMixin):
     order_items: Mapped[list["OrderItem"]] = relationship(back_populates="product")
     cart_items: Mapped[list["CartItem"]] = relationship(back_populates="product")
     reviews: Mapped[list["Review"]] = relationship(back_populates="product")
+    favorites: Mapped[list["Favorite"]] = relationship(back_populates="product")

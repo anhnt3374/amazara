@@ -17,3 +17,4 @@ class User(Base, UUIDMixin, TimestampMixin):
     cart_items: Mapped[list["CartItem"]] = relationship(back_populates="user")
     addresses: Mapped[list["Address"]] = relationship(back_populates="user")
     reviews: Mapped[list["Review"]] = relationship(back_populates="user")
+    favorites: Mapped[list["Favorite"]] = relationship(back_populates="user")
