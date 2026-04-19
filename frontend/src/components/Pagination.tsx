@@ -29,43 +29,45 @@ export default function Pagination({ currentPage, totalPages, onPageChange }: Pa
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage <= 1}
         className={clsx(
-          'px-3 py-1.5 text-xs rounded-pin border transition-colors',
+          'w-7 h-7 rounded-pin border text-xs transition-colors',
           currentPage <= 1
             ? 'border-sand text-warm-silver cursor-not-allowed'
-            : 'border-sand text-plum hover:border-plum'
+            : 'border-sand text-plum hover:border-plum',
         )}
+        aria-label="Previous page"
       >
-        Prev
+        ‹
       </button>
       {getPages().map((p, i) =>
         p === '...' ? (
-          <span key={`ellipsis-${i}`} className="px-2 text-xs text-olive">...</span>
+          <span key={`ellipsis-${i}`} className="px-1 text-xs text-olive">...</span>
         ) : (
           <button
             key={p}
             onClick={() => onPageChange(p)}
             className={clsx(
-              'w-8 h-8 text-xs rounded-pin border transition-colors',
+              'w-7 h-7 text-xs rounded-pin border transition-colors',
               p === currentPage
                 ? 'border-brand-red bg-brand-red text-white'
-                : 'border-sand text-plum hover:border-plum'
+                : 'border-sand text-plum hover:border-plum',
             )}
           >
             {p}
           </button>
-        )
+        ),
       )}
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage >= totalPages}
         className={clsx(
-          'px-3 py-1.5 text-xs rounded-pin border transition-colors',
+          'w-7 h-7 rounded-pin border text-xs transition-colors',
           currentPage >= totalPages
             ? 'border-sand text-warm-silver cursor-not-allowed'
-            : 'border-sand text-plum hover:border-plum'
+            : 'border-sand text-plum hover:border-plum',
         )}
+        aria-label="Next page"
       >
-        Next
+        ›
       </button>
     </div>
   )

@@ -79,7 +79,10 @@ export default function ChatWidget() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+    <div
+      className="fixed right-6 z-50 flex flex-col items-end gap-3"
+      style={{ bottom: 'calc(1.5rem + var(--bottom-bar-offset, 0px))' }}
+    >
       {open && (
         <div className="w-[360px] h-[560px] bg-white rounded-pin-lg border border-sand shadow-[0_20px_50px_rgba(33,25,34,0.18)] flex flex-col overflow-hidden">
           {effectiveTab === 'home' && (

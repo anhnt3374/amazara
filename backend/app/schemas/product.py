@@ -54,3 +54,10 @@ class ProductSearchResponse(BaseModel):
     page_size: int
     available_brands: list[BrandOut]
     available_categories: list[CategoryOut]
+
+
+class SimilarProductsResponse(BaseModel):
+    products: list[ProductOut]
+    total: int
+    page: int
+    page_size: int

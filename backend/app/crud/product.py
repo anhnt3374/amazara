@@ -1,4 +1,5 @@
 import math
+import random
 
 from sqlalchemy.orm import Session
 
@@ -148,4 +149,58 @@ def search_products(
         "page_size": PAGE_SIZE,
         "available_brands": available_brands,
         "available_categories": available_categories,
+    }
+
+
+SIMILAR_PAGE_SIZE = 20
+SIMILAR_MAX_TOTAL = 100
+
+
+def get_similar_products(
+    db: Session, product_id: str, page: int = 1
+) -> dict:
+    """Mock similar-products endpoint.
+
+    Seeded by product_id so the empty/populated state and the sampled order are
+    stable across refreshes for a given product.
+    """
+    empty_rng = random.Random(f"similar-empty::{product_id}")
+    if empty_rng.random() < 0.5:
+        return {
+            "products": [],
+            "total": 0,
+            "page": 1,
+            "page_size": SIMILAR_PAGE_SIZE,
+        }
+
+    candidate_ids = [
+        row[0]
+        for row in db.query(Product.id).filter(Product.id != product_id).all()
+    ]
+    if not candidate_ids:
+        return {
+            "products": [],
+            "total": 0,
+            "page": 1,
+            "page_size": SIMILAR_PAGE_SIZE,
+        }
+
+    sample_rng = random.Random(f"similar-sample::{product_id}")
+    sample_size = min(SIMILAR_MAX_TOTAL, len(candidate_ids))
+    sampled_ids = sample_rng.sample(candidate_ids, k=sample_size)
+
+    total = len(sampled_ids)
+    max_page = max(math.ceil(total / SIMILAR_PAGE_SIZE), 1)
+    page = max(1, min(page, max_page))
+
+    page_ids = sampled_ids[(page - 1) * SIMILAR_PAGE_SIZE : page * SIMILAR_PAGE_SIZE]
+    rows = db.query(Product).filter(Product.id.in_(page_ids)).all()
+    by_id = {p.id: p for p in rows}
+    ordered = [by_id[i] for i in page_ids if i in by_id]
+
+    return {
+        "products": ordered,
+        "total": total,
+        "page": page,
+        "page_size": SIMILAR_PAGE_SIZE,
     }

@@ -3,13 +3,17 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.api.v1.endpoints.auth import get_current_user_optional
 from app.crud.favorite import is_favorited as is_product_favorited
-from app.crud.product import search_products
+from app.crud.product import get_similar_products, search_products
 from app.crud.review import get_review_aggregate
 from app.db.session import get_db
 from app.models.category import Category
 from app.models.product import Product
 from app.models.user import User
-from app.schemas.product import ProductDetailOut, ProductSearchResponse
+from app.schemas.product import (
+    ProductDetailOut,
+    ProductSearchResponse,
+    SimilarProductsResponse,
+)
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -31,6 +35,20 @@ def search(
         sort=sort,
         page=page,
     )
+
+
+@router.get("/{product_id}/similar", response_model=SimilarProductsResponse)
+def similar(
+    product_id: str,
+    page: int = Query(1, ge=1, le=5),
+    db: Session = Depends(get_db),
+):
+    if not db.query(Product.id).filter(Product.id == product_id).first():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Product not found",
+        )
+    return get_similar_products(db, product_id=product_id, page=page)
 
 
 @router.get("/{product_id}", response_model=ProductDetailOut)

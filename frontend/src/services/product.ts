@@ -86,6 +86,33 @@ export async function getProduct(productId: string): Promise<Product> {
   return mapProduct(data)
 }
 
+export interface SimilarProductsResponse {
+  products: Product[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export async function getSimilarProducts(
+  productId: string,
+  page: number,
+): Promise<SimilarProductsResponse> {
+  const url = new URL(`${API_BASE}/products/${productId}/similar`, window.location.origin)
+  url.searchParams.set('page', String(page))
+  const res = await fetch(url.pathname + url.search)
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new ApiError(res.status, data.detail ?? 'Failed to load similar products')
+  }
+  const data = await res.json()
+  return {
+    products: data.products.map(mapProduct),
+    total: data.total,
+    page: data.page,
+    pageSize: data.page_size,
+  }
+}
+
 export async function getProductDetail(productId: string, token?: string | null): Promise<ProductDetail> {
   const headers: Record<string, string> = {}
   if (token) headers.Authorization = `Bearer ${token}`
