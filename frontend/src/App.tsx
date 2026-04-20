@@ -8,6 +8,7 @@ import Success from './pages/Success'
 import Home from './pages/Home'
 import Favorites from './pages/Favorites'
 import Cart from './pages/Cart'
+import Checkout from './pages/Checkout'
 import Orders from './pages/Orders'
 import StoreProducts from './pages/StoreProducts'
 import ProductList from './pages/ProductList'
@@ -74,6 +75,16 @@ export default function App() {
               <Layout>
                 <ProtectedRoute requiredType="user">
                   <Cart />
+                </ProtectedRoute>
+              </Layout>
+            }
+          />
+          <Route
+            path="/checkout"
+            element={
+              <Layout>
+                <ProtectedRoute requiredType="user">
+                  <Checkout />
                 </ProtectedRoute>
               </Layout>
             }

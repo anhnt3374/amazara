@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { EnrichedCartItem } from '../../types/cart'
+import { formatVnd, priceAfterDiscount } from '../../utils/money'
 import Checkbox from '../Checkbox'
 import QuantitySelector from '../QuantitySelector'
 import { ChevronDownIcon } from '../Icons'
@@ -12,14 +13,6 @@ interface CartItemRowProps {
   onDelete: () => void
   onToggleSimilar: () => void
   similarOpen: boolean
-}
-
-function priceAfterDiscount(price: number, discount: number) {
-  return discount > 0 ? Math.round(price * (1 - discount / 100)) : price
-}
-
-function formatVnd(n: number) {
-  return `${n.toLocaleString('vi-VN')}\u20AB`
 }
 
 export default function CartItemRow({

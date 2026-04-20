@@ -36,6 +36,7 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1)
   const [favoriteBusy, setFavoriteBusy] = useState(false)
   const [cartBusy, setCartBusy] = useState(false)
+  const [buyBusy, setBuyBusy] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
   useEffect(() => {
@@ -148,6 +149,18 @@ export default function ProductDetail() {
       setToast(err instanceof Error ? err.message : 'Add to cart failed')
     } finally {
       setCartBusy(false)
+    }
+  }
+
+  async function handleBuyNow() {
+    if (!requireAuth() || !product) return
+    setBuyBusy(true)
+    try {
+      const cartItem = await addToCart(token!, { productId: product.id, quantity })
+      navigate('/checkout', { state: { selectedItemIds: [cartItem.id] } })
+    } catch (err) {
+      setToast(err instanceof Error ? err.message : 'Buy now failed')
+      setBuyBusy(false)
     }
   }
 
@@ -343,9 +356,11 @@ export default function ProductDetail() {
                   </button>
                   <button
                     type="button"
-                    className="flex-1 h-[46px] bg-brand-red text-white text-sm font-semibold rounded-pin hover:bg-[var(--color-brand-red-hover)] transition-colors focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-blue)] focus:ring-offset-2"
+                    onClick={handleBuyNow}
+                    disabled={buyBusy}
+                    className="flex-1 h-[46px] bg-brand-red text-white text-sm font-semibold rounded-pin hover:bg-[var(--color-brand-red-hover)] transition-colors disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-blue)] focus:ring-offset-2"
                   >
-                    Buy Now
+                    {buyBusy ? 'Processing...' : 'Buy Now'}
                   </button>
                 </div>
               </div>

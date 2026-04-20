@@ -41,6 +41,15 @@ Use this file when you have a concrete task. Each entry lists the exact files to
 
 ---
 
+## Work on Orders / Checkout
+
+**Task:** Understand, debug, or extend the order flow
+1. `docs/features/orders/overview.md` — data model, statuses, key files
+2. `docs/features/orders/flows.md` — cart → checkout → placed; disabled affordances
+3. `docs/features/orders/api.md` — endpoint reference
+
+---
+
 ## Work on Frontend Pages / Routing
 
 **Task:** Add a page, modify routing, or change route guards

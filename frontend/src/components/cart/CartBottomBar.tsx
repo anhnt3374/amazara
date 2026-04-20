@@ -1,3 +1,4 @@
+import { formatVnd } from '../../utils/money'
 import Checkbox from '../Checkbox'
 
 interface CartBottomBarProps {
@@ -11,10 +12,6 @@ interface CartBottomBarProps {
   onRemoveInactive: () => void
   onSaveToFavorites: () => void
   onBuy: () => void
-}
-
-function formatVnd(n: number) {
-  return `${n.toLocaleString('vi-VN')}\u20AB`
 }
 
 export default function CartBottomBar({

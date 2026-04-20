@@ -4,8 +4,7 @@
 # 1. Reset schema: downgrade to base, upgrade to head.
 # 2. Validate image URLs in products.json → products_clean.json (skipped
 #    if products_clean.json already exists — delete it to force re-check).
-# 3. Seed in dependency order. Orders are intentionally skipped until the
-#    order UI lands.
+# 3. Seed in dependency order.
 #
 # Run from repo root: bash mock/seed_all.sh
 
@@ -23,37 +22,40 @@ if [ ! -x "$PY" ]; then
   exit 1
 fi
 
-echo "[1/9] Resetting schema..."
+echo "[1/10] Resetting schema..."
 (cd backend && "$ALEMBIC" downgrade base)
 (cd backend && "$ALEMBIC" upgrade head)
 
-echo "[2/9] Validating product image URLs..."
+echo "[2/10] Validating product image URLs..."
 if [ ! -f mock/products_clean.json ]; then
   "$PY" mock/validate_products.py
 else
   echo "  mock/products_clean.json already exists — skipping."
 fi
 
-echo "[3/9] Seeding users..."
+echo "[3/10] Seeding users..."
 "$PY" mock/seed_users.py
 
-echo "[4/9] Seeding addresses..."
+echo "[4/10] Seeding addresses..."
 "$PY" mock/seed_addresses.py
 
-echo "[5/9] Seeding stores..."
+echo "[5/10] Seeding stores..."
 "$PY" mock/seed_stores.py
 
-echo "[6/9] Seeding products..."
+echo "[6/10] Seeding products..."
 "$PY" mock/seed_products.py
 
-echo "[7/9] Seeding reviews..."
+echo "[7/10] Seeding reviews..."
 "$PY" mock/seed_reviews.py
 
-echo "[8/9] Seeding cart items..."
+echo "[8/10] Seeding cart items..."
 "$PY" mock/seed_cart_items.py
 
-echo "[9/9] Seeding favorites..."
+echo "[9/10] Seeding favorites..."
 "$PY" mock/seed_favorites.py
 
+echo "[10/10] Seeding orders..."
+"$PY" mock/seed_orders.py
+
 echo
-echo "Done. Orders were intentionally skipped."
+echo "Done."

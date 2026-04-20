@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import {
   bulkDeleteCartItems,
@@ -45,6 +46,7 @@ function priceAfterDiscount(price: number, discount: number) {
 
 export default function Cart() {
   const { token } = useAuth()
+  const navigate = useNavigate()
   const [items, setItems] = useState<EnrichedCartItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -216,8 +218,8 @@ export default function Cart() {
 
   const buy = useCallback(() => {
     if (selected.size === 0) return
-    setToast('Checkout is not yet available')
-  }, [selected])
+    navigate('/checkout', { state: { selectedItemIds: [...selected] } })
+  }, [selected, navigate])
 
   const handleToggleSimilar = useCallback(
     async (item: EnrichedCartItem) => {

@@ -48,6 +48,19 @@ Use this file to find the right docs for a given question. Match your keyword to
 
 ---
 
+## orders
+**Keywords:** order, checkout, place order, order list, order status, shipping, awaiting delivery, completed, cancelled, return, refund, cart to order, buy again, COD, cash on delivery
+
+| Question type | Read |
+|---|---|
+| How do orders work overall? | `docs/features/orders/overview.md` |
+| What are the order API endpoints? | `docs/features/orders/api.md` |
+| How does checkout flow from cart to order? | `docs/features/orders/flows.md` |
+| Why are "Change" buttons disabled? | `docs/features/orders/flows.md` |
+| How do I add a new order status? | `docs/features/orders/flows.md` |
+
+---
+
 ## frontend
 **Keywords:** React, Vite, TypeScript, Tailwind, component, page, route, Header, Layout, clsx, icon, proxy, form
 
