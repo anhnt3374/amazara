@@ -3,7 +3,13 @@ from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints.auth import get_current_user
 from app.crud.cart_item import bulk_delete_cart_items
-from app.crud.order import create_order, get_order_by_id, get_orders_by_user
+from app.crud.order import (
+    cancel_order,
+    create_order,
+    get_order_by_id,
+    get_orders_by_user,
+    update_order,
+)
 from app.db.session import get_db
 from app.models.order import Order, OrderStatus
 from app.models.user import User
@@ -12,6 +18,12 @@ from app.schemas.order import (
     OrderItemOut,
     OrderItemStoreMini,
     OrderOut,
+    OrderStatusUpdate,
+)
+from app.services.chat.notification_service import (
+    notify_order_cancelled,
+    notify_order_created,
+    notify_order_status_changed,
 )
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -59,7 +71,7 @@ def _serialize(order: Order) -> OrderOut:
 
 
 @router.post("/", response_model=OrderOut, status_code=status.HTTP_201_CREATED)
-def create(
+async def create(
     body: OrderCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -73,6 +85,7 @@ def create(
     if body.cart_item_ids:
         bulk_delete_cart_items(db, user_id=current_user.id, ids=body.cart_item_ids)
     order = get_order_by_id(db, order.id)
+    await notify_order_created(db, current_user.id, order)
     return _serialize(order)
 
 
@@ -98,4 +111,57 @@ def get_one(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Order not found",
         )
+    return _serialize(order)
+
+
+@router.post("/{order_id}/cancel", response_model=OrderOut)
+async def cancel(
+    order_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    order = get_order_by_id(db, order_id)
+    if not order or order.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found",
+        )
+    if order.status == OrderStatus.cancelled:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Order already cancelled",
+        )
+    order = cancel_order(db, order)
+    order = get_order_by_id(db, order.id)
+    await notify_order_cancelled(db, current_user.id, order)
+    return _serialize(order)
+
+
+@router.patch("/{order_id}/status", response_model=OrderOut)
+async def update_status(
+    order_id: str,
+    body: OrderStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    order = get_order_by_id(db, order_id)
+    if not order or order.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found",
+        )
+    old_status = order.status
+    if old_status == body.status:
+        return _serialize(order)
+    order.status = body.status
+    db.commit()
+    db.refresh(order)
+    order = get_order_by_id(db, order.id)
+    await notify_order_status_changed(
+        db,
+        current_user.id,
+        order,
+        old_status=old_status,
+        new_status=body.status,
+    )
     return _serialize(order)

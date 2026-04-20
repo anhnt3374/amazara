@@ -9,6 +9,7 @@ export function mapProduct(p: Record<string, unknown>): Product {
     discount: p.discount as number,
     images: p.image ? (p.image as string).split('|').map(s => s.trim()).filter(Boolean) : [],
     categoryId: p.category_id as string,
+    storeId: p.store_id as string,
     stock: (p.stock as number) ?? 0,
     isFavorited: Boolean(p.is_favorited),
   }

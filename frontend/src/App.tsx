@@ -13,6 +13,8 @@ import Orders from './pages/Orders'
 import StoreProducts from './pages/StoreProducts'
 import ProductList from './pages/ProductList'
 import ProductDetail from './pages/ProductDetail'
+import Messages from './pages/Messages'
+import StoreMessages from './pages/StoreMessages'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -100,11 +102,41 @@ export default function App() {
             }
           />
           <Route
+            path="/messages"
+            element={
+              <Layout>
+                <ProtectedRoute requiredType="user">
+                  <Messages />
+                </ProtectedRoute>
+              </Layout>
+            }
+          />
+          <Route
+            path="/messages/:conversationId"
+            element={
+              <Layout>
+                <ProtectedRoute requiredType="user">
+                  <Messages />
+                </ProtectedRoute>
+              </Layout>
+            }
+          />
+          <Route
             path="/store/products"
             element={
               <Layout>
                 <ProtectedRoute requiredType="store">
                   <StoreProducts />
+                </ProtectedRoute>
+              </Layout>
+            }
+          />
+          <Route
+            path="/store/messages"
+            element={
+              <Layout>
+                <ProtectedRoute requiredType="store">
+                  <StoreMessages />
                 </ProtectedRoute>
               </Layout>
             }

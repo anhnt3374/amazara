@@ -48,6 +48,19 @@ Use this file to find the right docs for a given question. Match your keyword to
 
 ---
 
+## chat
+**Keywords:** chat, message, messaging, conversation, websocket, ws, assistant, support, seller chat, store messages, contact seller, unread, notification
+
+| Question type | Read |
+|---|---|
+| How does chat work overall? | `docs/features/chat/overview.md` |
+| What chat endpoints and WS events exist? | `docs/features/chat/api.md` |
+| How do user/store/system conversations differ? | `docs/features/chat/overview.md` |
+| How are unread counts and read markers handled? | `docs/features/chat/overview.md` + `docs/features/chat/api.md` |
+| How do order updates reach the assistant thread? | `docs/features/chat/api.md` |
+
+---
+
 ## orders
 **Keywords:** order, checkout, place order, order list, order status, shipping, awaiting delivery, completed, cancelled, return, refund, cart to order, buy again, COD, cash on delivery
 

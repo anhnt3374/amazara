@@ -17,6 +17,7 @@ export interface Product {
   discount: number
   images: string[]
   categoryId: string
+  storeId: string
   stock: number
   isFavorited: boolean
 }

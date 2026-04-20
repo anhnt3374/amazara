@@ -6,7 +6,8 @@ import ReviewForm from '../components/ReviewForm'
 import ReviewList from '../components/ReviewList'
 import ReviewStats from '../components/ReviewStats'
 import StarRating from '../components/StarRating'
-import { ChevronLeftIcon, ChevronRightIcon, HeartFilledIcon, HeartIcon } from '../components/Icons'
+import { ChatBubbleIcon, ChevronLeftIcon, ChevronRightIcon, HeartFilledIcon, HeartIcon } from '../components/Icons'
+import { useChat } from '../contexts/ChatContext'
 import { useAuth } from '../hooks/useAuth'
 import { addToCart } from '../services/cart'
 import { addFavorite, removeFavorite } from '../services/favorite'
@@ -23,6 +24,7 @@ export default function ProductDetail() {
   const { account, token } = useAuth()
   const user = account?.type === 'user' ? account : null
   const navigate = useNavigate()
+  const chat = useChat()
 
   const [product, setProduct] = useState<ProductDetail | null>(null)
   const [reviews, setReviews] = useState<Review[]>([])
@@ -37,6 +39,7 @@ export default function ProductDetail() {
   const [favoriteBusy, setFavoriteBusy] = useState(false)
   const [cartBusy, setCartBusy] = useState(false)
   const [buyBusy, setBuyBusy] = useState(false)
+  const [chatBusy, setChatBusy] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
   useEffect(() => {
@@ -149,6 +152,27 @@ export default function ProductDetail() {
       setToast(err instanceof Error ? err.message : 'Add to cart failed')
     } finally {
       setCartBusy(false)
+    }
+  }
+
+  async function handleChatWithShop() {
+    if (!requireAuth() || !product) return
+    if (!product.storeId) {
+      setToast('Seller unavailable')
+      return
+    }
+    setChatBusy(true)
+    try {
+      const conv = await chat.openWithStore(product.storeId)
+      await chat.sendMessage(conv.id, {
+        content: `Hi, I'm interested in "${product.name}".`,
+        ref_type: 'product',
+        ref_id: product.id,
+      })
+      navigate(`/messages/${conv.id}`)
+    } catch (err) {
+      setToast(err instanceof Error ? err.message : 'Failed to open chat')
+      setChatBusy(false)
     }
   }
 
@@ -345,6 +369,16 @@ export default function ProductDetail() {
                     aria-label={product.isFavorited ? 'Remove from favorites' : 'Add to favorites'}
                   >
                     {product.isFavorited ? <HeartFilledIcon /> : <HeartIcon />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleChatWithShop}
+                    disabled={chatBusy}
+                    className="w-12 h-[46px] rounded-pin bg-warm-light text-plum hover:bg-[color:var(--color-border-hover)] flex items-center justify-center transition-colors disabled:opacity-60"
+                    aria-label="Chat with shop"
+                    title="Chat with shop"
+                  >
+                    <ChatBubbleIcon className="w-5 h-5" />
                   </button>
                   <button
                     type="button"

@@ -50,6 +50,15 @@ Use this file when you have a concrete task. Each entry lists the exact files to
 
 ---
 
+## Work on Chat / Messaging
+
+**Task:** Understand, debug, or extend buyer/store/system chat
+1. `docs/features/chat/overview.md` — participant models, routes, unread behavior, key files
+2. `docs/features/chat/api.md` — REST endpoints, WS events, order notification integration
+3. `docs/features/orders/api.md` — only if you need the order-triggered system messages
+
+---
+
 ## Work on Frontend Pages / Routing
 
 **Task:** Add a page, modify routing, or change route guards

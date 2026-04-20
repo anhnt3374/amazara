@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useChat } from '../contexts/ChatContext'
 import { addToCart } from '../services/cart'
 import { listOrders } from '../services/order'
 import type { Order, OrderItem, OrderStatus } from '../types/order'
@@ -64,7 +65,9 @@ function bucketItemsByStore(order: Order): ShopBucket[] {
 
 export default function Orders() {
   const { token } = useAuth()
+  const chat = useChat()
   const navigate = useNavigate()
+  const [contactingKey, setContactingKey] = useState<string | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab: TabKey = (searchParams.get('tab') as TabKey) ?? 'all'
   const [orders, setOrders] = useState<Order[]>([])
@@ -126,6 +129,33 @@ export default function Orders() {
       )
     })
   }, [orders, query])
+
+  const contactSeller = useCallback(
+    async (order: Order, bucket: ShopBucket) => {
+      if (!token || !bucket.storeId || bucket.storeId === 'unknown') {
+        setToast('Seller unavailable')
+        return
+      }
+      const key = `${order.id}-${bucket.storeId}`
+      setContactingKey(key)
+      try {
+        const conv = await chat.openWithStore(bucket.storeId)
+        const shortId = order.id.slice(0, 8).toUpperCase()
+        await chat.sendMessage(conv.id, {
+          content: `Hi, I have a question about order #${shortId}.`,
+          ref_type: 'order',
+          ref_id: order.id,
+        })
+        navigate(`/messages/${conv.id}`)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to open chat'
+        setToast(msg)
+      } finally {
+        setContactingKey(null)
+      }
+    },
+    [chat, navigate, token],
+  )
 
   const buyAgain = useCallback(
     async (order: Order) => {
@@ -220,14 +250,14 @@ export default function Orders() {
                   <span className="text-sm font-semibold text-plum">
                     {bucket.storeName.toUpperCase()}
                   </span>
-                  <span
-                    aria-disabled="true"
-                    tabIndex={-1}
-                    className="inline-flex items-center gap-1 h-7 px-2 text-xs text-white bg-brand-red rounded-sm opacity-80 cursor-not-allowed select-none"
-                    title="Chat is not available yet"
+                  <button
+                    type="button"
+                    onClick={() => contactSeller(order, bucket)}
+                    disabled={contactingKey === `${order.id}-${bucket.storeId}`}
+                    className="inline-flex items-center gap-1 h-7 px-2 text-xs text-white bg-brand-red rounded-sm hover:bg-[var(--color-brand-red-hover)] transition-colors disabled:opacity-60"
                   >
                     💬 Chat
-                  </span>
+                  </button>
                   <span
                     aria-disabled="true"
                     tabIndex={-1}
@@ -297,12 +327,13 @@ export default function Orders() {
                     </button>
                     <button
                       type="button"
-                      aria-disabled="true"
-                      tabIndex={-1}
-                      title="Contact seller is not available yet"
-                      className="h-10 px-6 rounded-pin bg-white text-plum border border-sand text-sm font-semibold opacity-70 cursor-not-allowed select-none"
+                      onClick={() => contactSeller(order, bucket)}
+                      disabled={contactingKey === `${order.id}-${bucket.storeId}`}
+                      className="h-10 px-6 rounded-pin bg-white text-plum border border-sand text-sm font-semibold hover:border-[color:var(--color-border-hover)] transition-colors disabled:opacity-60"
                     >
-                      Contact Seller
+                      {contactingKey === `${order.id}-${bucket.storeId}`
+                        ? 'Opening...'
+                        : 'Contact Seller'}
                     </button>
                   </div>
                 </div>

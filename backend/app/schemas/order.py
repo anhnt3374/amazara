@@ -27,6 +27,10 @@ class OrderUpdate(BaseModel):
     note: str | None = None
 
 
+class OrderStatusUpdate(BaseModel):
+    status: OrderStatus
+
+
 class OrderItemStoreMini(BaseModel):
     id: str
     name: str

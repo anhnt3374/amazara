@@ -2,6 +2,8 @@ import { useState } from 'react'
 import clsx from 'clsx'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useChat } from '../contexts/ChatContext'
+import ConversationList from './chat/ConversationList'
 import {
   ChatBubbleIcon,
   CheckCircleIcon,
@@ -22,36 +24,11 @@ const COLLECTIONS = [
   { title: 'Account & Security', desc: 'Login, password, 2FA', count: '9 articles' },
 ]
 
-const MOCK_AVATARS = [
-  { letter: 'A', bg: 'bg-warm-light' },
-  { letter: 'R', bg: 'bg-sand' },
-  { letter: 'S', bg: 'bg-[color:var(--color-border-hover)]' },
-]
-
-function AvatarCluster({ size = 'md' }: { size?: 'sm' | 'md' }) {
-  const px = size === 'sm' ? 'w-7 h-7 text-[10px]' : 'w-8 h-8 text-xs'
-  return (
-    <div className="flex -space-x-2">
-      {MOCK_AVATARS.map(a => (
-        <div
-          key={a.letter}
-          className={clsx(
-            px,
-            a.bg,
-            'rounded-full border-2 border-white flex items-center justify-center font-semibold text-plum',
-          )}
-        >
-          {a.letter}
-        </div>
-      ))}
-    </div>
-  )
-}
-
 export default function ChatWidget() {
   const { account } = useAuth()
   const user = account?.type === 'user' ? account : null
   const navigate = useNavigate()
+  const chat = useChat()
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<Tab>('home')
 
@@ -79,6 +56,26 @@ export default function ChatWidget() {
     setTab('messages')
   }
 
+  const handleOpenConversation = (id: string) => {
+    setOpen(false)
+    navigate(`/messages/${id}`)
+  }
+
+  const handleStartSystem = async () => {
+    if (!user) {
+      requireLogin()
+      return
+    }
+    try {
+      const conv = await chat.openSystem()
+      handleOpenConversation(conv.id)
+    } catch {
+      // Surface failure silently; user can retry from the widget.
+    }
+  }
+
+  const badge = user && chat.unreadTotal > 0 ? chat.unreadTotal : 0
+
   return (
     <div
       className="fixed right-6 z-50 flex flex-col items-end gap-3"
@@ -94,7 +91,14 @@ export default function ChatWidget() {
               onOpenHelp={() => setTab('help')}
             />
           )}
-          {effectiveTab === 'messages' && <MessagesTab onClose={() => setOpen(false)} />}
+          {effectiveTab === 'messages' && (
+            <MessagesTab
+              onClose={() => setOpen(false)}
+              conversations={chat.conversations}
+              onSelect={conv => handleOpenConversation(conv.id)}
+              onAskAssistant={handleStartSystem}
+            />
+          )}
           {effectiveTab === 'help' && <HelpTab onClose={() => setOpen(false)} />}
 
           <TabBar tab={effectiveTab} onChange={handleSelectTab} />
@@ -106,9 +110,14 @@ export default function ChatWidget() {
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Open support chat"
-          className="w-14 h-14 rounded-full bg-brand-red text-white flex items-center justify-center shadow-[0_12px_30px_rgba(230,0,35,0.35)] hover:bg-[var(--color-brand-red-hover)] transition-colors focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-blue)] focus:ring-offset-2"
+          className="relative w-14 h-14 rounded-full bg-brand-red text-white flex items-center justify-center shadow-[0_12px_30px_rgba(230,0,35,0.35)] hover:bg-[var(--color-brand-red-hover)] transition-colors focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-blue)] focus:ring-offset-2"
         >
           <ChatBubbleIcon className="w-6 h-6" />
+          {badge > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 rounded-full bg-white text-brand-red text-[11px] font-bold flex items-center justify-center border border-brand-red">
+              {badge > 99 ? '99+' : badge}
+            </span>
+          )}
         </button>
       )}
     </div>
@@ -145,7 +154,6 @@ function HomeTab({
         <CloseButton onClose={onClose} />
         <div className="flex items-center justify-between pr-8">
           <span className="text-xl font-bold text-plum tracking-[-0.4px]">Support</span>
-          <AvatarCluster />
         </div>
         <div className="mt-5">
           <p className="text-sm text-olive">Hi {name} <span aria-hidden>👋</span></p>
@@ -160,8 +168,8 @@ function HomeTab({
           className="rounded-pin-md border border-sand bg-white px-4 py-3 flex items-center justify-between text-left hover:border-[color:var(--color-border-hover)] transition-colors"
         >
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-plum">Send us a message</span>
-            <span className="text-xs text-olive">We typically reply in under 20 minutes</span>
+            <span className="text-sm font-semibold text-plum">Open your messages</span>
+            <span className="text-xs text-olive">Chat with stores or ask our assistant</span>
           </div>
           <ChevronRightIcon className="text-olive" />
         </button>
@@ -170,7 +178,7 @@ function HomeTab({
           <CheckCircleIcon className="text-[color:var(--color-success-green)] shrink-0 mt-0.5" />
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-semibold text-plum">Status: All systems operational</span>
-            <span className="text-xs text-olive">Updated April 16, 2026 · 15:30 GMT+7</span>
+            <span className="text-xs text-olive">Order updates appear in your Assistant thread.</span>
           </div>
         </div>
 
@@ -190,7 +198,17 @@ function HomeTab({
   )
 }
 
-function MessagesTab({ onClose }: { onClose: () => void }) {
+function MessagesTab({
+  onClose,
+  conversations,
+  onSelect,
+  onAskAssistant,
+}: {
+  onClose: () => void
+  conversations: import('../types/chat').Conversation[]
+  onSelect: (conv: import('../types/chat').Conversation) => void
+  onAskAssistant: () => void
+}) {
   return (
     <>
       <div className="relative h-14 border-b border-sand flex items-center justify-center shrink-0">
@@ -198,27 +216,19 @@ function MessagesTab({ onClose }: { onClose: () => void }) {
         <CloseButton onClose={onClose} />
       </div>
 
-      <div className="flex-1 overflow-y-auto relative">
-        <div className="px-4 py-4 border-b border-sand flex items-start gap-3">
-          <AvatarCluster size="sm" />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-plum">MBot</span>
-              <span className="text-xs text-warm-silver">3y</span>
-            </div>
-            <p className="text-sm text-plum mt-0.5">Welcome <span aria-hidden>👋</span> What can I help you with?</p>
-          </div>
-        </div>
+      <div className="flex-1 overflow-y-auto">
+        <ConversationList conversations={conversations} onSelect={onSelect} />
+      </div>
 
-        <div className="absolute left-0 right-0 bottom-4 flex justify-center">
-          <button
-            type="button"
-            className="h-11 px-5 rounded-pin bg-brand-red text-white text-sm font-semibold flex items-center gap-2 shadow-[0_8px_20px_rgba(230,0,35,0.25)] hover:bg-[var(--color-brand-red-hover)] transition-colors"
-          >
-            Ask a question
-            <HelpCircleIcon className="w-4 h-4" />
-          </button>
-        </div>
+      <div className="px-4 py-3 border-t border-sand flex justify-center">
+        <button
+          type="button"
+          onClick={onAskAssistant}
+          className="h-10 px-4 rounded-pin bg-brand-red text-white text-sm font-semibold flex items-center gap-2 shadow-[0_8px_20px_rgba(230,0,35,0.25)] hover:bg-[var(--color-brand-red-hover)] transition-colors"
+        >
+          Ask the assistant
+          <HelpCircleIcon className="w-4 h-4" />
+        </button>
       </div>
     </>
   )

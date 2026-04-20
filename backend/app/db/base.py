@@ -11,3 +11,5 @@ from app.models.address import Address  # noqa: F401
 from app.models.review import Review  # noqa: F401
 from app.models.store import Store  # noqa: F401
 from app.models.favorite import Favorite  # noqa: F401
+from app.models.conversation import Conversation  # noqa: F401
+from app.models.message import Message  # noqa: F401

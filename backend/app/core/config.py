@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     # App
     APP_ENV: str = "development"
 
+    # Chat
+    BOT_ENGINE: str = "placeholder"
+
     @property
     def DATABASE_URL(self) -> str:
         return (
