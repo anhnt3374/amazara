@@ -43,7 +43,7 @@ def _enrich(item) -> EnrichedCartItemOut:
             price=product.price,
             discount=product.discount,
             image=product.image,
-            low_tier=product.low_tier,
+            stock=product.stock,
             category_id=product.category_id,
             store_id=product.store_id,
             category_name=category_name,

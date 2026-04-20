@@ -91,4 +91,13 @@ body::-webkit-scrollbar {
   button {
     font-family: inherit;
   }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary {
+    cursor: pointer;
+  }
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }

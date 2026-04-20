@@ -2,7 +2,8 @@
         venv install-backend install-frontend \
         makemigrations migrate \
         run-backend run-frontend \
-        docker-up docker-down docker-logs
+        docker-up docker-down docker-logs \
+        seed
 
 help:
 	@echo "Backend"
@@ -20,6 +21,9 @@ help:
 	@echo "  make docker-up             Start MySQL + Milvus"
 	@echo "  make docker-down           Stop Docker services"
 	@echo "  make docker-logs           View Docker service logs"
+	@echo ""
+	@echo "Data"
+	@echo "  make seed                  Reset schema + validate + re-run all seeds"
 
 # ── Backend ───────────────────────────────────────────────────────────────────
 
@@ -57,3 +61,8 @@ docker-down:
 
 docker-logs:
 	docker compose -f infra/docker-compose.yml logs -f
+
+# ── Data ──────────────────────────────────────────────────────────────────────
+
+seed:
+	bash mock/seed_all.sh

@@ -11,7 +11,7 @@ class ProductCreate(BaseModel):
     description: str | None = None
     discount: int = 0
     image: str | None = None
-    low_tier: int = 0
+    stock: int = 100
     category_id: str | None = None
 
 
@@ -21,7 +21,7 @@ class ProductUpdate(BaseModel):
     price: int | None = None
     discount: int | None = None
     image: str | None = None
-    low_tier: int | None = None
+    stock: int | None = None
     category_id: str | None = None
 
 
@@ -32,9 +32,10 @@ class ProductOut(BaseModel):
     price: int
     discount: int
     image: str | None
-    low_tier: int
+    stock: int
     category_id: str | None
     store_id: str
+    is_favorited: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -44,7 +45,6 @@ class ProductDetailOut(ProductOut):
     brand_name: str | None
     review_count: int
     average_rating: float | None
-    is_favorited: bool
 
 
 class ProductSearchResponse(BaseModel):

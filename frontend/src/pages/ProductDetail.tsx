@@ -20,7 +20,8 @@ const EMPTY_BREAKDOWN: ReviewBreakdown = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
 
 export default function ProductDetail() {
   const { productId } = useParams<{ productId: string }>()
-  const { user, token } = useAuth()
+  const { account, token } = useAuth()
+  const user = account?.type === 'user' ? account : null
   const navigate = useNavigate()
 
   const [product, setProduct] = useState<ProductDetail | null>(null)

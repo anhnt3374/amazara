@@ -1,6 +1,6 @@
 import type { Brand, Category, Product, ProductDetail, SortOption } from '../types/product'
 
-function mapProduct(p: Record<string, unknown>): Product {
+export function mapProduct(p: Record<string, unknown>): Product {
   return {
     id: p.id as string,
     name: p.name as string,
@@ -9,6 +9,8 @@ function mapProduct(p: Record<string, unknown>): Product {
     discount: p.discount as number,
     images: p.image ? (p.image as string).split('|').map(s => s.trim()).filter(Boolean) : [],
     categoryId: p.category_id as string,
+    stock: (p.stock as number) ?? 0,
+    isFavorited: Boolean(p.is_favorited),
   }
 }
 
@@ -19,7 +21,6 @@ function mapProductDetail(p: Record<string, unknown>): ProductDetail {
     brandName: (p.brand_name as string | null) ?? null,
     reviewCount: (p.review_count as number) ?? 0,
     averageRating: (p.average_rating as number | null) ?? null,
-    isFavorited: Boolean(p.is_favorited),
   }
 }
 import { ApiError } from './auth'
@@ -43,7 +44,10 @@ export interface ProductSearchResponse {
   availableCategories: Category[]
 }
 
-export async function searchProducts(params: ProductSearchParams): Promise<ProductSearchResponse> {
+export async function searchProducts(
+  params: ProductSearchParams,
+  token?: string | null,
+): Promise<ProductSearchResponse> {
   const url = new URL(`${API_BASE}/products/search`, window.location.origin)
   if (params.search) url.searchParams.set('search', params.search)
   if (params.brandIds?.length) {
@@ -55,7 +59,9 @@ export async function searchProducts(params: ProductSearchParams): Promise<Produ
   if (params.page) url.searchParams.set('page', String(params.page))
   if (params.sort) url.searchParams.set('sort', params.sort)
 
-  const res = await fetch(url.pathname + url.search)
+  const headers: Record<string, string> = {}
+  if (token) headers.Authorization = `Bearer ${token}`
+  const res = await fetch(url.pathname + url.search, { headers })
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
     throw new ApiError(res.status, data.detail ?? 'Search failed')
@@ -96,10 +102,13 @@ export interface SimilarProductsResponse {
 export async function getSimilarProducts(
   productId: string,
   page: number,
+  token?: string | null,
 ): Promise<SimilarProductsResponse> {
   const url = new URL(`${API_BASE}/products/${productId}/similar`, window.location.origin)
   url.searchParams.set('page', String(page))
-  const res = await fetch(url.pathname + url.search)
+  const headers: Record<string, string> = {}
+  if (token) headers.Authorization = `Bearer ${token}`
+  const res = await fetch(url.pathname + url.search, { headers })
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
     throw new ApiError(res.status, data.detail ?? 'Failed to load similar products')

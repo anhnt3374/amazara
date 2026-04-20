@@ -1,11 +1,12 @@
-"""Seed 100–500 mock reviews per product using the sentiment sample pool.
+"""Seed 50–100 mock reviews per product using the sentiment sample pool.
 
 Requires users and products to be seeded first.
-Reviews are drawn from generic_review_sentiment_1200.json and assigned
-random users. The label field in the JSON is ignored (the Review model
-has no rating column) — it only guided the tone of each review text.
+Reviews are drawn from generic_review_sentiment_1200.json; the `label`
+field is used as the review's `rating` (1–5). Reviewers are randomly
+assigned. Each inserted review is also streamed to reviews.csv.
 """
 
+import csv
 import json
 import os
 import random
@@ -25,9 +26,10 @@ from sqlalchemy.orm import Session
 
 MOCK_DIR = os.path.dirname(__file__)
 REVIEWS_JSON = os.path.join(MOCK_DIR, "generic_review_sentiment_1200.json")
+REVIEWS_CSV = os.path.join(MOCK_DIR, "reviews.csv")
 
-MIN_REVIEWS = 100
-MAX_REVIEWS = 500
+MIN_REVIEWS = 50
+MAX_REVIEWS = 100
 BATCH_SIZE = 5000
 
 
@@ -35,8 +37,8 @@ def main():
     with open(REVIEWS_JSON, encoding="utf-8") as f:
         review_pool = json.load(f)
 
-    review_texts = [r["review"] for r in review_pool]
-    print(f"Loaded {len(review_texts)} review samples from {REVIEWS_JSON}")
+    samples = [(int(r["label"]), r["review"]) for r in review_pool]
+    print(f"Loaded {len(samples)} review samples from {REVIEWS_JSON}")
 
     with Session(engine) as db:
         product_ids = [pid for (pid,) in db.query(Product.id).all()]
@@ -57,27 +59,42 @@ def main():
 
     conn = engine.connect()
     insert_sql = text(
-        "INSERT INTO reviews (id, product_id, user_id, content) "
-        "VALUES (:id, :product_id, :user_id, :content)"
+        "INSERT INTO reviews (id, product_id, user_id, rating, content) "
+        "VALUES (:id, :product_id, :user_id, :rating, :content)"
     )
+
+    csv_file = open(REVIEWS_CSV, "w", newline="", encoding="utf-8")
+    writer = csv.DictWriter(
+        csv_file,
+        fieldnames=["id", "product_id", "user_id", "rating", "content"],
+    )
+    writer.writeheader()
 
     try:
         for idx, pid in enumerate(product_ids, start=1):
             count = random.randint(MIN_REVIEWS, MAX_REVIEWS)
             for _ in range(count):
-                batch.append({
+                rating, content = random.choice(samples)
+                row = {
                     "id": generate_uuid(),
                     "product_id": pid,
                     "user_id": random.choice(user_ids),
-                    "content": random.choice(review_texts),
-                })
+                    "rating": rating,
+                    "content": content,
+                }
+                batch.append(row)
+                writer.writerow(row)
 
             if len(batch) >= BATCH_SIZE:
                 conn.execute(insert_sql, batch)
                 conn.commit()
                 total_created += len(batch)
                 batch.clear()
-                print(f"  Progress: {idx}/{total_products} products, {total_created} reviews inserted...")
+                csv_file.flush()
+                print(
+                    f"  Progress: {idx}/{total_products} products, "
+                    f"{total_created} reviews inserted..."
+                )
 
         if batch:
             conn.execute(insert_sql, batch)
@@ -85,9 +102,11 @@ def main():
             total_created += len(batch)
             batch.clear()
     finally:
+        csv_file.close()
         conn.close()
 
     print(f"\nDone! Created {total_created} reviews across {total_products} products.")
+    print(f"Reviews saved to: {REVIEWS_CSV}")
 
 
 if __name__ == "__main__":

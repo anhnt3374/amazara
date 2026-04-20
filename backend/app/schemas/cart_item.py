@@ -37,7 +37,7 @@ class ProductMini(BaseModel):
     price: int
     discount: int
     image: str | None
-    low_tier: int
+    stock: int
     category_id: str | None
     store_id: str
     category_name: str | None

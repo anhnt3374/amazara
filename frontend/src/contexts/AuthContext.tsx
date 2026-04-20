@@ -1,31 +1,35 @@
 import { createContext, useCallback, useEffect, useState } from 'react'
 import {
+  type Account,
   type RegisterPayload,
-  type UserOut,
+  type RegisterStorePayload,
   getMe,
   login as apiLogin,
+  loginStore as apiLoginStore,
   register as apiRegister,
+  registerStore as apiRegisterStore,
 } from '../services/auth'
 
 const TOKEN_KEY = 'access_token'
 
 interface AuthContextValue {
-  user: UserOut | null
+  account: Account | null
   token: string | null
   loading: boolean
-  login: (email: string, password: string) => Promise<void>
-  register: (payload: RegisterPayload) => Promise<void>
+  loginUser: (email: string, password: string) => Promise<void>
+  loginStore: (email: string, password: string) => Promise<void>
+  registerUser: (payload: RegisterPayload) => Promise<void>
+  registerStore: (payload: RegisterStorePayload) => Promise<void>
   logout: () => void
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserOut | null>(null)
+  const [account, setAccount] = useState<Account | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Bootstrap: restore session from localStorage on app startup
   useEffect(() => {
     const stored = localStorage.getItem(TOKEN_KEY)
     if (!stored) {
@@ -33,9 +37,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
     getMe(stored)
-      .then(u => {
+      .then(a => {
         setToken(stored)
-        setUser(u)
+        setAccount(a)
       })
       .catch(() => {
         localStorage.removeItem(TOKEN_KEY)
@@ -43,28 +47,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setLoading(false))
   }, [])
 
-  const login = useCallback(async (email: string, password: string) => {
-    const { access_token } = await apiLogin({ email, password })
+  const applyToken = useCallback(async (access_token: string) => {
     localStorage.setItem(TOKEN_KEY, access_token)
-    const u = await getMe(access_token)
+    const a = await getMe(access_token)
     setToken(access_token)
-    setUser(u)
+    setAccount(a)
   }, [])
 
-  const register = useCallback(async (payload: RegisterPayload) => {
-    await apiRegister(payload)
-    // Auto-login after successful registration
-    await login(payload.email, payload.password)
-  }, [login])
+  const loginUser = useCallback(
+    async (email: string, password: string) => {
+      const { access_token } = await apiLogin({ email, password })
+      await applyToken(access_token)
+    },
+    [applyToken],
+  )
+
+  const loginStore = useCallback(
+    async (email: string, password: string) => {
+      const { access_token } = await apiLoginStore({ email, password })
+      await applyToken(access_token)
+    },
+    [applyToken],
+  )
+
+  const registerUser = useCallback(
+    async (payload: RegisterPayload) => {
+      await apiRegister(payload)
+      await loginUser(payload.email, payload.password)
+    },
+    [loginUser],
+  )
+
+  const registerStore = useCallback(
+    async (payload: RegisterStorePayload) => {
+      const { access_token } = await apiRegisterStore(payload)
+      await applyToken(access_token)
+    },
+    [applyToken],
+  )
 
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY)
     setToken(null)
-    setUser(null)
+    setAccount(null)
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{
+        account,
+        token,
+        loading,
+        loginUser,
+        loginStore,
+        registerUser,
+        registerStore,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

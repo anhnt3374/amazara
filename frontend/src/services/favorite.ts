@@ -1,6 +1,20 @@
+import type { Product } from '../types/product'
 import { ApiError } from './auth'
+import { mapProduct } from './product'
 
 const API_BASE = '/api/v1'
+
+export async function listFavoriteProducts(token: string): Promise<Product[]> {
+  const res = await fetch(`${API_BASE}/favorites/`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new ApiError(res.status, data.detail ?? 'Failed to load favorites')
+  }
+  const data = await res.json()
+  return (data as Record<string, unknown>[]).map(mapProduct)
+}
 
 export async function addFavorite(token: string, productId: string): Promise<void> {
   const res = await fetch(`${API_BASE}/favorites/`, {

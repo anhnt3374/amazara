@@ -11,7 +11,7 @@ export interface CartProductMini {
   price: number
   discount: number
   images: string[]
-  lowTier: number
+  stock: number
   categoryId: string | null
   storeId: string
   categoryName: string | null

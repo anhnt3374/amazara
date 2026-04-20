@@ -17,6 +17,8 @@ export interface Product {
   discount: number
   images: string[]
   categoryId: string
+  stock: number
+  isFavorited: boolean
 }
 
 export interface ProductDetail extends Product {
@@ -24,7 +26,6 @@ export interface ProductDetail extends Product {
   brandName: string | null
   reviewCount: number
   averageRating: number | null
-  isFavorited: boolean
 }
 
 export interface Review {

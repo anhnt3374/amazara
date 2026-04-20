@@ -8,20 +8,34 @@ import Success from './pages/Success'
 import Home from './pages/Home'
 import Favorites from './pages/Favorites'
 import Cart from './pages/Cart'
+import Orders from './pages/Orders'
+import StoreProducts from './pages/StoreProducts'
 import ProductList from './pages/ProductList'
 import ProductDetail from './pages/ProductDetail'
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth()
+interface ProtectedRouteProps {
+  children: React.ReactNode
+  requiredType?: 'user' | 'store'
+}
+
+function ProtectedRoute({ children, requiredType }: ProtectedRouteProps) {
+  const { account, loading } = useAuth()
   if (loading) return null
-  if (!user) return <Navigate to="/login" replace />
+  if (!account) return <Navigate to="/login" replace />
+  if (requiredType && account.type !== requiredType) {
+    const fallback = account.type === 'store' ? '/store/products' : '/'
+    return <Navigate to={fallback} replace />
+  }
   return <>{children}</>
 }
 
 function GuestRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth()
+  const { account, loading } = useAuth()
   if (loading) return null
-  if (user) return <Navigate to="/" replace />
+  if (account) {
+    const home = account.type === 'store' ? '/store/products' : '/'
+    return <Navigate to={home} replace />
+  }
   return <>{children}</>
 }
 
@@ -34,9 +48,56 @@ export default function App() {
           <Route path="/" element={<Layout><Home /></Layout>} />
           <Route path="/list" element={<Layout><ProductList /></Layout>} />
           <Route path="/product/:productId" element={<Layout><ProductDetail /></Layout>} />
-          <Route path="/success" element={<Layout><ProtectedRoute><Success /></ProtectedRoute></Layout>} />
-          <Route path="/favorites" element={<Layout><ProtectedRoute><Favorites /></ProtectedRoute></Layout>} />
-          <Route path="/cart" element={<Layout><ProtectedRoute><Cart /></ProtectedRoute></Layout>} />
+          <Route
+            path="/success"
+            element={
+              <Layout>
+                <ProtectedRoute>
+                  <Success />
+                </ProtectedRoute>
+              </Layout>
+            }
+          />
+          <Route
+            path="/favorites"
+            element={
+              <Layout>
+                <ProtectedRoute requiredType="user">
+                  <Favorites />
+                </ProtectedRoute>
+              </Layout>
+            }
+          />
+          <Route
+            path="/cart"
+            element={
+              <Layout>
+                <ProtectedRoute requiredType="user">
+                  <Cart />
+                </ProtectedRoute>
+              </Layout>
+            }
+          />
+          <Route
+            path="/orders"
+            element={
+              <Layout>
+                <ProtectedRoute requiredType="user">
+                  <Orders />
+                </ProtectedRoute>
+              </Layout>
+            }
+          />
+          <Route
+            path="/store/products"
+            element={
+              <Layout>
+                <ProtectedRoute requiredType="store">
+                  <StoreProducts />
+                </ProtectedRoute>
+              </Layout>
+            }
+          />
 
           {/* Auth pages — full-page design, no Layout */}
           <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />

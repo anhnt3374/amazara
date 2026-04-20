@@ -11,7 +11,8 @@ interface ReviewFormProps {
 }
 
 export default function ReviewForm({ productId, onCreated }: ReviewFormProps) {
-  const { user, token } = useAuth()
+  const { account, token } = useAuth()
+  const user = account?.type === 'user' ? account : null
   const [rating, setRating] = useState(5)
   const [content, setContent] = useState('')
   const [submitting, setSubmitting] = useState(false)

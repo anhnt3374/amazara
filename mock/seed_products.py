@@ -1,12 +1,14 @@
-"""Seed products from products.json into the database.
+"""Seed products from products_clean.json into the database.
 
-Requires stores to be seeded first (seed_stores.py).
-Also creates brands and categories on the fly from the JSON data.
+Requires stores to be seeded first (seed_stores.py) and requires the
+validation step (validate_products.py) to have produced products_clean.json.
+Brands and categories are created on the fly from the JSON data.
 Each product is randomly assigned to one of the existing stores.
+Exports products.csv with one row per seeded product.
 """
 
+import csv
 import json
-import math
 import os
 import random
 import sys
@@ -22,8 +24,8 @@ from app.models.product import Product
 from app.models.store import Store
 
 MOCK_DIR = os.path.dirname(__file__)
-PRODUCTS_JSON = os.path.join(MOCK_DIR, "products.json")
-
+PRODUCTS_JSON = os.path.join(MOCK_DIR, "products_clean.json")
+PRODUCTS_CSV = os.path.join(MOCK_DIR, "products.csv")
 
 INR_TO_USD = 84.0
 
@@ -49,16 +51,11 @@ def parse_price(raw) -> int:
     return round(value)
 
 
-def clean_image(raw) -> str | None:
-    """Return image URL or None if the value is NaN / empty."""
-    if isinstance(raw, float) and math.isnan(raw):
-        return None
-    if isinstance(raw, str) and raw.strip():
-        return raw.strip()[:500]
-    return None
-
-
 def main():
+    if not os.path.exists(PRODUCTS_JSON):
+        print(f"ERROR: {PRODUCTS_JSON} not found. Run validate_products.py first.")
+        sys.exit(1)
+
     with open(PRODUCTS_JSON, encoding="utf-8") as f:
         products_data = json.load(f)
 
@@ -66,7 +63,6 @@ def main():
 
     db = SessionLocal()
 
-    # Fetch all stores — abort if none exist
     store_ids = [s.id for s in db.query(Store.id).all()]
     if not store_ids:
         print("ERROR: No stores found. Run seed_stores.py first.")
@@ -74,9 +70,8 @@ def main():
         sys.exit(1)
     print(f"Found {len(store_ids)} stores to assign products to.")
 
-    # Caches for brand and category lookups
-    brand_cache: dict[str, str] = {}   # name → id
-    cat_cache: dict[tuple[str, str | None], str] = {}  # (name, brand_id) → id
+    brand_cache: dict[str, str] = {}
+    cat_cache: dict[tuple[str, str | None], str] = {}
 
     for brand in db.query(Brand).all():
         brand_cache[brand.name] = brand.id
@@ -85,15 +80,15 @@ def main():
 
     created = 0
     skipped = 0
+    csv_rows: list[dict] = []
 
     try:
         for item in products_data:
-            name = item.get("name", "").strip()
+            name = (item.get("name") or "").strip()
             if not name:
                 skipped += 1
                 continue
 
-            # Brand
             brand_name = (item.get("brand") or "").strip()
             brand_id = None
             if brand_name:
@@ -104,7 +99,6 @@ def main():
                     brand_cache[brand_name] = brand.id
                 brand_id = brand_cache[brand_name]
 
-            # Category
             cat_name = (item.get("category") or "").strip()
             category_id = None
             if cat_name:
@@ -116,19 +110,39 @@ def main():
                     cat_cache[cat_key] = category.id
                 category_id = cat_cache[cat_key]
 
+            image = (item.get("images") or "").strip() or None
+            store_id = random.choice(store_ids)
+            stock = int(item.get("quantity") or 0)
+            price = parse_price(item.get("price", 0))
+            discount = int(item.get("discount", 0))
+
             product = Product(
                 name=name[:255],
                 description=item.get("description"),
-                price=parse_price(item.get("price", 0)),
-                discount=int(item.get("discount", 0)),
-                image=clean_image(item.get("images")),
-                low_tier=0,
+                price=price,
+                discount=discount,
+                image=image,
+                stock=stock,
                 category_id=category_id,
-                store_id=random.choice(store_ids),
+                store_id=store_id,
             )
             db.add(product)
-            created += 1
+            db.flush()
 
+            csv_rows.append({
+                "id": product.id,
+                "name": product.name,
+                "brand": brand_name or "",
+                "category": cat_name or "",
+                "store_id": store_id,
+                "price": price,
+                "discount": discount,
+                "stock": stock,
+                "image_count": len([u for u in (image or "").split("|") if u.strip()]),
+                "image_first": (image or "").split("|")[0].strip() if image else "",
+            })
+
+            created += 1
             if created % 500 == 0:
                 db.commit()
                 print(f"  Created {created} products...")
@@ -140,7 +154,20 @@ def main():
     finally:
         db.close()
 
+    with open(PRODUCTS_CSV, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "id", "name", "brand", "category", "store_id",
+                "price", "discount", "stock", "image_count", "image_first",
+            ],
+        )
+        writer.writeheader()
+        for row in csv_rows:
+            writer.writerow(row)
+
     print(f"\nDone! Created: {created}, Skipped: {skipped}")
+    print(f"Products saved to: {PRODUCTS_CSV}")
 
 
 if __name__ == "__main__":

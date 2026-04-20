@@ -2,9 +2,11 @@ import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import type { Product, Brand, Category, ProductFilters, SortOption } from '../types/product'
 import { searchProducts } from '../services/product'
+import { useAuth } from './useAuth'
 
 export function useProductFilters() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const { token } = useAuth()
   const [products, setProducts] = useState<Product[]>([])
   const [total, setTotal] = useState(0)
   const [availableBrands, setAvailableBrands] = useState<Brand[]>([])
@@ -30,7 +32,7 @@ export function useProductFilters() {
       categoryIds: filters.categoryIds.length ? filters.categoryIds : undefined,
       page: filters.page,
       sort: filters.sort,
-    })
+    }, token)
       .then(data => {
         setProducts(data.products)
         setTotal(data.total)
@@ -42,7 +44,7 @@ export function useProductFilters() {
         setTotal(0)
       })
       .finally(() => setLoading(false))
-  }, [paramsKey])
+  }, [paramsKey, token])
 
   function setFilters(next: ProductFilters) {
     const params = new URLSearchParams()
@@ -58,6 +60,7 @@ export function useProductFilters() {
     filters,
     setFilters,
     products,
+    setProducts,
     total,
     availableBrands,
     availableCategories,

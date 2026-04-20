@@ -8,10 +8,13 @@ import { ApiError } from '../services/auth'
 const inputBase =
   'h-[44px] border border-warm-silver rounded-pin px-[15px] text-sm text-plum outline-none transition-colors w-full bg-white placeholder:text-warm-silver focus:border-[color:var(--color-focus-blue)] focus:ring-2 focus:ring-[color:var(--color-focus-blue)]/30'
 
+type AccountType = 'user' | 'store'
+
 export default function Login() {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { loginUser, loginStore } = useAuth()
 
+  const [accountType, setAccountType] = useState<AccountType>('user')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -26,8 +29,13 @@ export default function Login() {
     if (!termsAccepted) { setTermsError(true); return }
     setLoading(true)
     try {
-      await login(email, password)
-      navigate('/success')
+      if (accountType === 'store') {
+        await loginStore(email, password)
+        navigate('/store/products')
+      } else {
+        await loginUser(email, password)
+        navigate('/success')
+      }
     } catch (err) {
       if (err instanceof ApiError && err.message === 'Invalid email or password') {
         setApiError('Incorrect email or password.')
@@ -71,10 +79,29 @@ export default function Login() {
           </button>
 
           <h1 className="text-[34px] font-bold text-plum tracking-[-1px] m-0 mb-1.5 leading-tight">Log in</h1>
-          <p className="text-[13px] text-olive m-0 mb-[22px]">
+          <p className="text-[13px] text-olive m-0 mb-[18px]">
             Don&apos;t have an account?{' '}
             <Link to="/signup" className="text-brand-red font-semibold underline">Create an Account</Link>
           </p>
+
+          {/* Account type toggle */}
+          <div className="mb-[18px] inline-flex self-start p-0.5 bg-fog border border-sand rounded-pin">
+            {(['user', 'store'] as AccountType[]).map(t => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setAccountType(t)}
+                className={clsx(
+                  'h-8 px-4 text-[13px] font-medium rounded-pin transition-colors',
+                  accountType === t
+                    ? 'bg-white text-plum shadow-[0_1px_2px_rgba(33,25,34,0.08)]'
+                    : 'text-olive hover:text-plum',
+                )}
+              >
+                {t === 'user' ? 'User' : 'Store'}
+              </button>
+            ))}
+          </div>
 
           <form className="flex flex-col gap-[13px] flex-1" onSubmit={handleSubmit}>
             {apiError && (

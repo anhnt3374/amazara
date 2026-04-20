@@ -40,7 +40,7 @@ function mapProductMini(raw: Record<string, unknown>): CartProductMini {
     price: raw.price as number,
     discount: raw.discount as number,
     images,
-    lowTier: (raw.low_tier as number) ?? 0,
+    stock: (raw.stock as number) ?? 0,
     categoryId: (raw.category_id as string | null) ?? null,
     storeId: raw.store_id as string,
     categoryName: (raw.category_name as string | null) ?? null,

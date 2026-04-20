@@ -49,12 +49,13 @@ function AvatarCluster({ size = 'md' }: { size?: 'sm' | 'md' }) {
 }
 
 export default function ChatWidget() {
-  const { user } = useAuth()
+  const { account } = useAuth()
+  const user = account?.type === 'user' ? account : null
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<Tab>('home')
 
-  const greetingName = user?.fullname || user?.username || 'there'
+  const greetingName = user?.fullname || user?.username || account?.displayName || 'there'
   const effectiveTab: Tab = tab === 'messages' && !user ? 'home' : tab
 
   const requireLogin = () => {

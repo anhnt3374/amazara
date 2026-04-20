@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { BagIcon, HeartIcon, JordanLogo, SearchIcon } from './Icons'
+import AccountMenu from './AccountMenu'
 
 const NAV_ITEMS = ['New & Featured', 'Men', 'Women', 'Kids', 'Sale']
 
@@ -112,7 +113,7 @@ const DROPDOWN_DATA: Record<string, { title: string; items: string[] }[]> = {
 const POPULAR_SEARCHES = ['air max', 'air force 1', 'jordan', 'nike mercurial vapor 16', 'jordan 1 low', 'basketball shoes', 'ja 3', 'structure plus']
 
 export default function Header() {
-  const { user } = useAuth()
+  const { account, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [scrolled, setScrolled] = useState(false)
@@ -186,7 +187,7 @@ export default function Header() {
   }
 
   function handleProtectedNav(dest: string) {
-    if (!user) navigate('/login')
+    if (!account) navigate('/login')
     else navigate(dest)
   }
 
@@ -207,7 +208,11 @@ export default function Header() {
               <span className="text-warm-silver">|</span>
               <Link to="/" className="hover:underline hover:text-plum">Help</Link>
               <span className="text-warm-silver">|</span>
-              <Link to="/login" className="hover:underline font-medium text-plum">Sign In</Link>
+              {account ? (
+                <AccountMenu account={account} onSignOut={logout} />
+              ) : (
+                <Link to="/login" className="hover:underline font-medium text-plum">Sign In</Link>
+              )}
             </div>
           </div>
         </div>

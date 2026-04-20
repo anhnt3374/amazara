@@ -59,23 +59,42 @@ make install-frontend           # npm install in frontend/
 make run-frontend               # Vite dev server on :5173
 make docker-up                  # Start MySQL + Milvus
 make docker-down                # Stop Docker services
+make seed                       # Reset schema + validate + re-run all seeds
 ```
 
 Backend commands execute via `backend/venv/bin/` — never assume a globally activated venv.
 
 ## Seed Mock Data
 
-After migrations, seed the database with mock data for development. Run in order:
+The full pipeline runs via:
 
 ```bash
-backend/venv/bin/python mock/seed_users.py       # 100 users → mock/users.csv
-backend/venv/bin/python mock/seed_addresses.py    # 1–3 addresses/user → mock/addresses.csv
-backend/venv/bin/python mock/seed_stores.py       # 20 stores → mock/stores.csv
-backend/venv/bin/python mock/seed_products.py     # ~9,350 products (from mock/products.json)
-backend/venv/bin/python mock/seed_reviews.py      # 100–500 reviews/product (from mock/generic_review_sentiment_1200.json)
+make seed
 ```
 
-Scripts are idempotent (skip existing records). Credentials exported to CSV in `mock/`.
+That wrapper calls `mock/seed_all.sh`, which (a) resets the schema with
+`alembic downgrade base && alembic upgrade head`, (b) validates product
+image URLs, and (c) runs every seed script in dependency order. Order
+seeding is intentionally skipped until the order UI ships.
+
+### Individual scripts
+
+Run in order (each requires predecessors). Every script also exports its
+rows to a CSV under `mock/` for reuse:
+
+```bash
+backend/venv/bin/python mock/validate_products.py  # products.json → products_clean.json (HEAD-checks image URLs)
+backend/venv/bin/python mock/seed_users.py         # 100 users → mock/users.csv
+backend/venv/bin/python mock/seed_addresses.py     # 1–5 addresses/user → mock/addresses.csv
+backend/venv/bin/python mock/seed_stores.py        # 20 stores → mock/stores.csv
+backend/venv/bin/python mock/seed_products.py      # products (from products_clean.json) → mock/products.csv
+backend/venv/bin/python mock/seed_reviews.py       # 50–100 reviews/product → mock/reviews.csv
+backend/venv/bin/python mock/seed_cart_items.py    # 0–99 cart items/user → mock/cart_items.csv
+backend/venv/bin/python mock/seed_favorites.py     # 0–40 favorites/user → mock/favorites.csv
+```
+
+`validate_products.py` caches its per-URL results in `mock/url_check_cache.json`
+so re-runs are fast. Delete that file to force a full re-check.
 
 ## Stop Docker
 

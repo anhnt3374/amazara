@@ -1,4 +1,4 @@
-"""Seed 1–3 mock addresses per user into the database and export to CSV."""
+"""Seed 1–5 mock addresses per user into the database and export to CSV."""
 
 import csv
 import os
@@ -83,7 +83,7 @@ def main():
                 skipped_users += 1
                 continue
 
-            count = random.randint(1, 3)
+            count = random.randint(1, 5)
             for _ in range(count):
                 phone = random_phone()
                 place = random_place()

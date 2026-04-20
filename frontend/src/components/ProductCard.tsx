@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Product } from '../types/product'
-import { ChevronLeftIcon, ChevronRightIcon } from './Icons'
+import { ChevronLeftIcon, ChevronRightIcon, HeartFilledIcon, HeartIcon } from './Icons'
 
 interface ProductCardProps {
   product: Product
+  onToggleFavorite?: (productId: string, next: boolean) => void
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ product, onToggleFavorite }: ProductCardProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const hasMultipleImages = product.images.length > 1
+  const isSoldOut = product.stock === 0
 
   const discountedPrice = product.discount > 0
     ? Math.round(product.price * (1 - product.discount / 100))
@@ -31,21 +33,50 @@ export default function ProductCard({ product }: ProductCardProps) {
     )
   }
 
+  function handleToggleFavorite(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    onToggleFavorite?.(product.id, !product.isFavorited)
+  }
+
   return (
-    <Link to={`/product/${product.id}`} className="group cursor-pointer block">
+    <Link
+      to={`/product/${product.id}`}
+      className="group cursor-pointer block bg-white rounded-pin-md border border-sand overflow-hidden transition-shadow hover:shadow-[0_6px_16px_rgba(33,25,34,0.08)]"
+    >
       {/* Image container */}
-      <div className="relative aspect-square bg-fog rounded-pin-md overflow-hidden">
+      <div className="relative aspect-square bg-fog overflow-hidden">
         <img
           src={product.images[currentImageIndex]}
           alt={product.name}
-          className="w-full h-full object-cover"
+          className={`w-full h-full object-cover ${isSoldOut ? 'grayscale opacity-55' : ''}`}
         />
 
-        {/* Discount tag */}
-        {product.discount > 0 && (
+        {/* Sold-out or discount badge (sold-out wins) */}
+        {isSoldOut ? (
+          <span className="absolute top-3 left-3 bg-brand-red text-white text-xs font-semibold px-2 py-1 rounded-pin-sm">
+            Out of Stock
+          </span>
+        ) : product.discount > 0 ? (
           <span className="absolute top-3 left-3 bg-brand-red text-white text-xs font-semibold px-2 py-1 rounded-pin-sm">
             {product.discount}% OFF
           </span>
+        ) : null}
+
+        {/* Heart toggle (user-only — parent passes onToggleFavorite) */}
+        {onToggleFavorite && (
+          <button
+            type="button"
+            onClick={handleToggleFavorite}
+            aria-label={product.isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+            className="absolute top-3 right-3 w-9 h-9 bg-white/85 hover:bg-white rounded-full flex items-center justify-center shadow-sm transition-colors"
+          >
+            {product.isFavorited ? (
+              <HeartFilledIcon className="text-brand-red" />
+            ) : (
+              <HeartIcon className="text-plum" />
+            )}
+          </button>
         )}
 
         {/* Image navigation arrows */}
@@ -82,7 +113,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       </div>
 
       {/* Product info */}
-      <div className="mt-3">
+      <div className={`px-3 pt-2.5 pb-3 ${isSoldOut ? 'opacity-60' : ''}`}>
         <h3 className="text-sm font-medium text-plum line-clamp-2">{product.name}</h3>
         <div className="mt-1 flex items-center gap-2">
           {discountedPrice !== null ? (

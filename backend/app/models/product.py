@@ -11,8 +11,8 @@ class Product(Base, UUIDMixin, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     price: Mapped[int] = mapped_column(Integer, nullable=False)
     discount: Mapped[int] = mapped_column(Integer, default=0)
-    image: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    low_tier: Mapped[int] = mapped_column(Integer, default=0)
+    image: Mapped[str | None] = mapped_column(Text, nullable=True)
+    stock: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
     category_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("categories.id"), nullable=True
     )

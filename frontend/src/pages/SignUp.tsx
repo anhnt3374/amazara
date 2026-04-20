@@ -3,9 +3,10 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeftIcon, ButterflyLogo, EyeIcon, EyeOffIcon, FacebookIcon, GoogleIcon } from '../components/Icons'
 import { useAuth } from '../hooks/useAuth'
-import { ApiError, type RegisterPayload } from '../services/auth'
+import { ApiError, type RegisterPayload, type RegisterStorePayload } from '../services/auth'
 
 interface FieldErrors {
+  name?: string
   email?: string
   username?: string
   password?: string
@@ -16,6 +17,8 @@ const inputBase =
 
 const inputError = 'border-[color:var(--color-error-red)] focus:border-[color:var(--color-error-red)] focus:ring-[color:var(--color-error-red)]/30'
 
+type AccountType = 'user' | 'store'
+
 function validatePassword(password: string): string | null {
   if (password.length < 8) return 'Password is too weak (minimum 8 characters)'
   return null
@@ -23,10 +26,19 @@ function validatePassword(password: string): string | null {
 
 export default function SignUp() {
   const navigate = useNavigate()
-  const { register } = useAuth()
+  const { registerUser, registerStore } = useAuth()
 
+  const [accountType, setAccountType] = useState<AccountType>('user')
+
+  // User fields
   const [fullname, setFullname] = useState('')
   const [username, setUsername] = useState('')
+
+  // Store fields
+  const [storeName, setStoreName] = useState('')
+  const [description, setDescription] = useState('')
+
+  // Shared
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -51,9 +63,20 @@ export default function SignUp() {
 
     setLoading(true)
     try {
-      const payload: RegisterPayload = { email, username, fullname, password }
-      await register(payload)
-      navigate('/success')
+      if (accountType === 'store') {
+        const payload: RegisterStorePayload = {
+          name: storeName,
+          email,
+          password,
+          description: description.trim() || null,
+        }
+        await registerStore(payload)
+        navigate('/store/products')
+      } else {
+        const payload: RegisterPayload = { email, username, fullname, password }
+        await registerUser(payload)
+        navigate('/success')
+      }
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.message === 'Email already registered') {
@@ -99,49 +122,106 @@ export default function SignUp() {
           </button>
 
           <h1 className="text-[34px] font-bold text-plum tracking-[-1px] m-0 mb-1.5 leading-tight">Create an Account</h1>
-          <p className="text-[13px] text-olive m-0 mb-[22px]">
+          <p className="text-[13px] text-olive m-0 mb-[18px]">
             Already have an account?{' '}
             <Link to="/login" className="text-brand-red font-semibold underline">Log in</Link>
           </p>
 
+          {/* Account type toggle */}
+          <div className="mb-[18px] inline-flex self-start p-0.5 bg-fog border border-sand rounded-pin">
+            {(['user', 'store'] as AccountType[]).map(t => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => { setAccountType(t); setFieldErrors({}) }}
+                className={clsx(
+                  'h-8 px-4 text-[13px] font-medium rounded-pin transition-colors',
+                  accountType === t
+                    ? 'bg-white text-plum shadow-[0_1px_2px_rgba(33,25,34,0.08)]'
+                    : 'text-olive hover:text-plum',
+                )}
+              >
+                {t === 'user' ? 'User' : 'Store'}
+              </button>
+            ))}
+          </div>
+
           <form className="flex flex-col gap-[13px] flex-1" onSubmit={handleSubmit}>
 
-            {/* Full Name */}
-            <div className="flex flex-col gap-[5px]">
-              <label className="text-[13px] font-medium text-plum" htmlFor="signup-fullname">
-                Full Name
-              </label>
-              <input
-                id="signup-fullname"
-                className={inputBase}
-                type="text"
-                placeholder="John Doe"
-                value={fullname}
-                onChange={e => setFullname(e.target.value)}
-                required
-                autoComplete="name"
-              />
-            </div>
+            {accountType === 'user' ? (
+              <>
+                {/* Full Name */}
+                <div className="flex flex-col gap-[5px]">
+                  <label className="text-[13px] font-medium text-plum" htmlFor="signup-fullname">
+                    Full Name
+                  </label>
+                  <input
+                    id="signup-fullname"
+                    className={inputBase}
+                    type="text"
+                    placeholder="John Doe"
+                    value={fullname}
+                    onChange={e => setFullname(e.target.value)}
+                    required
+                    autoComplete="name"
+                  />
+                </div>
 
-            {/* Username */}
-            <div className="flex flex-col gap-[5px]">
-              <label className="text-[13px] font-medium text-plum" htmlFor="signup-username">
-                Username
-              </label>
-              <input
-                id="signup-username"
-                className={clsx(inputBase, fieldErrors.username && inputError)}
-                type="text"
-                placeholder="johndoe"
-                value={username}
-                onChange={e => { setUsername(e.target.value); clearFieldError('username') }}
-                required
-                autoComplete="username"
-              />
-              {fieldErrors.username && (
-                <span className="text-[11.5px] text-[color:var(--color-error-red)]">{fieldErrors.username}</span>
-              )}
-            </div>
+                {/* Username */}
+                <div className="flex flex-col gap-[5px]">
+                  <label className="text-[13px] font-medium text-plum" htmlFor="signup-username">
+                    Username
+                  </label>
+                  <input
+                    id="signup-username"
+                    className={clsx(inputBase, fieldErrors.username && inputError)}
+                    type="text"
+                    placeholder="johndoe"
+                    value={username}
+                    onChange={e => { setUsername(e.target.value); clearFieldError('username') }}
+                    required
+                    autoComplete="username"
+                  />
+                  {fieldErrors.username && (
+                    <span className="text-[11.5px] text-[color:var(--color-error-red)]">{fieldErrors.username}</span>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Store Name */}
+                <div className="flex flex-col gap-[5px]">
+                  <label className="text-[13px] font-medium text-plum" htmlFor="signup-store-name">
+                    Store Name
+                  </label>
+                  <input
+                    id="signup-store-name"
+                    className={clsx(inputBase, fieldErrors.name && inputError)}
+                    type="text"
+                    placeholder="My Store"
+                    value={storeName}
+                    onChange={e => { setStoreName(e.target.value); clearFieldError('name') }}
+                    required
+                    autoComplete="organization"
+                  />
+                </div>
+
+                {/* Description (optional) */}
+                <div className="flex flex-col gap-[5px]">
+                  <label className="text-[13px] font-medium text-plum" htmlFor="signup-store-desc">
+                    Description <span className="text-warm-silver font-normal">(optional)</span>
+                  </label>
+                  <input
+                    id="signup-store-desc"
+                    className={inputBase}
+                    type="text"
+                    placeholder="What do you sell?"
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
 
             {/* Email */}
             <div className="flex flex-col gap-[5px]">
