@@ -18,7 +18,7 @@ All REST endpoints live under `/api/v1/chats`. All require a Bearer token except
 | POST | `/chats/system` | user | Get-or-create the user's system conversation. |
 | POST | `/chats/with-store/{store_id}` | user | Get-or-create the user-store conversation. |
 | GET | `/chats/{conversation_id}/messages?limit=&before=` | user | Load messages (descending, then reversed; paged via `before=<message_id>`). |
-| POST | `/chats/{conversation_id}/messages` | user | Send a message as the user. Triggers bot reply if conversation type is `user_system`. Broadcasts via WS. |
+| POST | `/chats/{conversation_id}/messages` | user | Send a message as the user. Triggers LangGraph-backed bot routing if conversation type is `user_system`. Broadcasts via WS. |
 | POST | `/chats/{conversation_id}/read` | user | Mark the user's last-read timestamp. |
 
 ### Store-side
@@ -102,7 +102,7 @@ Authorization: every endpoint checks `is_participant(conv, user_id=... | store_i
 ```
 
 - `send` persists the message, updates `last_message_at`, and broadcasts to both participants.
-- For a `user_system` conversation, after saving the user message the server invokes `BotEngine.reply()`. If it returns non-empty text, a `sender_type='bot'` message is persisted and broadcast.
+- For a `user_system` conversation, after saving the user message the server invokes the configured `BotEngine`. With the default `LangGraphEngine`, messages without digits return a greeting and messages with digits return the sum of all signed integers in the query.
 
 ### Server → client
 
@@ -119,6 +119,12 @@ The same `message` event is also used for:
 - System notifications triggered by the order endpoints (same channel, `sender_type='system'`).
 
 Errors are soft (sent as a JSON frame, socket stays open) unless auth fails at connect time.
+
+## System assistant runtime
+
+- Default engine: `BOT_ENGINE=langgraph`
+- Observability env vars: `LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT`
+- The current LangGraph workflow is deterministic and does not call an external LLM provider.
 
 ## Order → system notifications
 

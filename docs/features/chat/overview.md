@@ -18,7 +18,7 @@ There is **no** user-user or store-store chat. Stores do not receive the floatin
 
 - **Transport:** REST for fetching history + WebSocket for real-time delivery.
 - **Delivery fan-out:** every new message is broadcast to the user's WS connections and (if present) the store's WS connections via an in-memory `ConnectionManager`.
-- **Bot backend:** `BotEngine` is a Strategy interface. The current implementation is `StaticPlaceholderEngine` which returns a fixed string. A future LangGraph engine can be swapped in without touching call-sites — only `get_bot_engine()` changes.
+- **Bot backend:** `BotEngine` is a Strategy interface. The default implementation is `LangGraphEngine`, which routes deterministic mock behaviors for the system conversation and emits LangSmith traces when enabled. The placeholder engine still exists as a fallback behind `BOT_ENGINE=placeholder`.
 - **Frontend send path:** the frontend sends messages over REST, then relies on WS fan-out for real-time updates and bot/system delivery.
 - **Primary UI entry points:** buyer routes are `/messages` and `/messages/:conversationId`; the store route is `/store/messages`; the floating widget opens for guests and users, but only users can enter the messages tab.
 - **No chat search, typing indicators, edit/delete, or attachments.**
@@ -32,7 +32,9 @@ There is **no** user-user or store-store chat. Stores do not receive the floatin
 - `backend/app/schemas/chat.py` — `ConversationOut`, `MessageOut`, `SendMessageRequest`, `WsClientSend`, `WsClientRead`.
 - `backend/app/crud/conversation.py` — `get_or_create_user_store`, `get_or_create_user_system`, `list_by_user`, `list_by_store`, `touch_last_message`, `mark_read`, `unread_count`, `is_participant`.
 - `backend/app/crud/message.py` — `create_message`, `list_by_conversation`, `last_message`.
-- `backend/app/services/chat/bot_engine.py` — `BotEngine` ABC + `StaticPlaceholderEngine` + `get_bot_engine()`.
+- `backend/app/services/chat/bot_engine.py` — `BotEngine` ABC + engine selection via `BOT_ENGINE`.
+- `backend/app/services/chat/langgraph_engine.py` — LangGraph workflow for system-chat routing and mock replies.
+- `backend/app/services/chat/system_reply_service.py` — shared REST/WS helper that persists and broadcasts system replies.
 - `backend/app/services/chat/connection_manager.py` — async in-memory connection registry keyed by `(account_type, account_id)`.
 - `backend/app/services/chat/notification_service.py` — `notify_order_created`, `notify_order_status_changed`, `notify_order_cancelled`.
 - `backend/app/api/v1/endpoints/chat.py` — REST endpoints under `/api/v1/chats`.
@@ -94,7 +96,7 @@ At the frontend layer, `ChatContext` also keeps an `unreadTotal` badge for the u
 ## Intentional gaps (not bugs)
 
 - **No chat between two users or two stores.** There is no endpoint, no UI, and no data model for it.
-- **Bot replies are synchronous and simple.** `StaticPlaceholderEngine.reply()` returns a fixed string. LangGraph integration is an intentional future extension point.
+- **Bot replies are deterministic mocks in v1.** The system conversation uses LangGraph routing: queries without digits return a greeting, and queries with digits return the sum of all signed integers found in the message.
 - **No message history paging UI yet.** `GET /chats/{id}/messages?limit=&before=` supports it; the frontend fetches the latest 100 and does not paginate further.
 - **System conversation has no "close"** — it always exists for every user who hits `GET /chats`.
 - **WebSocket is not the primary send path in the UI.** The browser keeps the socket open for incoming messages and read events, but outbound messages still go through the REST endpoints.

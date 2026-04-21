@@ -20,7 +20,10 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
 
     # Chat
-    BOT_ENGINE: str = "placeholder"
+    BOT_ENGINE: str = "langgraph"
+    LANGSMITH_TRACING: bool = False
+    LANGSMITH_API_KEY: str = ""
+    LANGSMITH_PROJECT: str = "shope-chat"
 
     @property
     def DATABASE_URL(self) -> str:

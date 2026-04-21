@@ -15,7 +15,7 @@ from app.crud.conversation import (
     touch_last_message,
     unread_count,
 )
-from app.crud.message import create_message, last_message, list_by_conversation
+from app.crud.message import create_message, last_message
 from app.db.session import get_db
 from app.models.conversation import Conversation, ConversationType
 from app.models.message import SenderType
@@ -27,8 +27,8 @@ from app.schemas.chat import (
     PartnerInfo,
     SendMessageRequest,
 )
-from app.services.chat.bot_engine import get_bot_engine
 from app.services.chat.connection_manager import get_connection_manager
+from app.services.chat.system_reply_service import maybe_send_system_reply
 
 router = APIRouter(prefix="/chats", tags=["chats"])
 
@@ -214,20 +214,14 @@ async def send_message_as_user(
     out = MessageOut.model_validate(msg)
     await _broadcast_message(conv, out)
 
-    if conv.type == ConversationType.user_system:
-        engine = get_bot_engine()
-        history = list_by_conversation(db, conv.id, limit=20)
-        reply_text = await engine.reply(current_user, body.content, history)
-        if reply_text:
-            bot_msg = create_message(
-                db,
-                conversation_id=conv.id,
-                sender_type=SenderType.bot,
-                sender_id=None,
-                content=reply_text,
-            )
-            touch_last_message(db, conv, bot_msg.created_at)
-            await _broadcast_message(conv, MessageOut.model_validate(bot_msg))
+    await maybe_send_system_reply(
+        db,
+        conv,
+        current_user,
+        body.content,
+        transport="rest",
+        broadcaster=_broadcast_message,
+    )
     return out
 
 
