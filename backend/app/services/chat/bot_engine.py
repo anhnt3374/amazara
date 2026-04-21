@@ -15,7 +15,12 @@ class BotEngine(ABC):
 
     @abstractmethod
     async def reply(
-        self, user: User, user_message: str, history: list[Message]
+        self,
+        user: User,
+        user_message: str,
+        history: list[Message],
+        *,
+        transport: str = "unknown",
     ) -> str | None:
         """Return bot reply text, or None to skip sending a reply."""
 
@@ -26,7 +31,7 @@ class StaticPlaceholderEngine(BotEngine):
         "bring in the real assistant soon."
     )
 
-    async def reply(self, user, user_message, history):
+    async def reply(self, user, user_message, history, *, transport="unknown"):
         return self.MESSAGE
 
 
@@ -38,9 +43,10 @@ def get_bot_engine() -> BotEngine:
     if _engine_cache is not None:
         return _engine_cache
     name = getattr(settings, "BOT_ENGINE", "placeholder")
-    # Register future engines here:
-    # if name == "langgraph":
-    #     from app.services.chat.langgraph_engine import LangGraphEngine
-    #     _engine_cache = LangGraphEngine()
-    _engine_cache = StaticPlaceholderEngine()
+    if name == "langgraph":
+        from app.services.chat.langgraph_engine import LangGraphEngine
+
+        _engine_cache = LangGraphEngine()
+    else:
+        _engine_cache = StaticPlaceholderEngine()
     return _engine_cache
