@@ -105,6 +105,14 @@ Use this file when you have a concrete task. Each entry lists the exact files to
 
 ---
 
+## Run Smoke Test
+
+**Task:** Verify the current local system still works end to end
+1. `docs/shared/setup.md` — app startup, smoke test command, cleanup options
+2. `docs/features/chat/overview.md` — understand buyer/store/system chat expectations if chat cases fail
+
+---
+
 ## Understand Project Conventions
 
 **Task:** Language rules, naming, patterns, model/schema/CRUD structure

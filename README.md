@@ -219,6 +219,25 @@ Scripts are idempotent — they skip records that already exist. Credentials are
 
 ---
 
+## Smoke Test
+
+With Docker, backend, and frontend running, verify the main flows with:
+
+```bash
+backend/venv/bin/python backend/scripts/smoke_test.py
+```
+
+The script prints a JSON summary and cleans up the generated `smoke.*` data automatically.
+
+Useful variants:
+
+```bash
+backend/venv/bin/python backend/scripts/smoke_test.py --keep-data
+backend/venv/bin/python backend/scripts/smoke_test.py --cleanup-only
+```
+
+---
+
 ## Stop Docker
 
 ```bash

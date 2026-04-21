@@ -96,6 +96,37 @@ backend/venv/bin/python mock/seed_favorites.py     # 0–40 favorites/user → m
 `validate_products.py` caches its per-URL results in `mock/url_check_cache.json`
 so re-runs are fast. Delete that file to force a full re-check.
 
+## Smoke Test
+
+After the backend, frontend, and Docker services are running, you can run the
+local smoke test script to verify the main system flows without keeping the
+generated smoke data:
+
+```bash
+backend/venv/bin/python backend/scripts/smoke_test.py
+```
+
+Current smoke coverage includes:
+
+- backend health
+- frontend route serving for the main routes
+- user auth (`register`, `login`, `me`)
+- product search and product detail
+- addresses, favorites, cart, and orders
+- user system chat over REST and WebSocket
+- store auth and buyer-store chat
+
+The script creates temporary `smoke.*` user/store data, prints a JSON
+`PASS` / `FAIL` / `BLOCKED` report, and then cleans up the generated smoke
+records automatically.
+
+Useful variants:
+
+```bash
+backend/venv/bin/python backend/scripts/smoke_test.py --keep-data
+backend/venv/bin/python backend/scripts/smoke_test.py --cleanup-only
+```
+
 ## Stop Docker
 
 ```bash
