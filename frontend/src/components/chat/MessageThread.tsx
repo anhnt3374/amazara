@@ -30,7 +30,7 @@ export default function MessageThread({ conversation }: Props) {
 
   const partnerName =
     conversation.type === 'user_system'
-      ? 'Shope Assistant'
+      ? 'Amaraza Assistant'
       : conversation.partner.display_name
 
   return (

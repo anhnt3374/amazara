@@ -34,7 +34,7 @@ router = APIRouter(prefix="/chats", tags=["chats"])
 
 
 def _system_partner() -> PartnerInfo:
-    return PartnerInfo(id=None, display_name="Shope Assistant", avatar=None)
+    return PartnerInfo(id=None, display_name="Amaraza Assistant", avatar=None)
 
 
 def _store_partner(store: Store | None) -> PartnerInfo:

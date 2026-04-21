@@ -8,7 +8,7 @@ tags: [monorepo, layout, services, ports]
 ## Monorepo Layout
 
 ```
-shope/
+Amaraza/
 ├── frontend/          # React 18 + Vite + TypeScript
 ├── backend/           # Python + FastAPI + SQLAlchemy + Alembic
 ├── infra/             # docker-compose.yml (MySQL + Milvus)

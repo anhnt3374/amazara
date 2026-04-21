@@ -38,7 +38,7 @@ export default function ConversationList({
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-semibold text-plum truncate">
                   {conv.type === 'user_system'
-                    ? 'Shope Assistant'
+                    ? 'Amaraza Assistant'
                     : conv.partner.display_name}
                 </span>
                 {conv.unread_count > 0 && (

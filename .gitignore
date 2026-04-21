@@ -57,3 +57,5 @@ Thumbs.db
 # ========================
 *.log
 logs/
+# Added by code-review-graph
+.code-review-graph/

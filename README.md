@@ -1,11 +1,11 @@
-# Shope
+# Amaraza
 
 E-commerce monorepo with **Frontend** (React + Vite + TypeScript), **Backend** (FastAPI + SQLAlchemy), and **Infra** (Docker — MySQL 8 + Milvus).
 
 ## Project Structure
 
 ```
-shope/
+Amaraza/
 ├── frontend/          # React + Vite + TypeScript
 ├── backend/           # Python + FastAPI + SQLAlchemy + Alembic
 ├── infra/             # docker-compose.yml

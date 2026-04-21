@@ -9,7 +9,7 @@ tags: [chat, message, conversation, websocket, bot, langgraph, notification, con
 The chat feature has three participant patterns:
 
 1. **User ↔ Store** — a buyer messages a seller. One conversation per `(user, store)` pair.
-2. **User ↔ System** — a buyer chats with a bot-driven "Shope Assistant" thread. One per user.
+2. **User ↔ System** — a buyer chats with a bot-driven "Amaraza Assistant" thread. One per user.
 3. **System notifications** — order lifecycle events (created / status changed / cancelled) are posted as `sender_type='system'` messages into the user's system conversation.
 
 There is **no** user-user or store-store chat. Stores do not receive the floating chat widget, only the `/store/messages` page.
