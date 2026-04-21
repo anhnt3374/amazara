@@ -15,7 +15,7 @@ from app.crud.conversation import (
     touch_last_message,
     unread_count,
 )
-from app.crud.message import create_message, last_message
+from app.crud.message import create_message, last_message, list_by_conversation
 from app.db.session import get_db
 from app.models.conversation import Conversation, ConversationType
 from app.models.message import SenderType

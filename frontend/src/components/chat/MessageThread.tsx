@@ -1,12 +1,25 @@
-import { useEffect, useMemo, useRef } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+} from 'react'
 import { useChat, useActiveThread } from '../../contexts/ChatContext'
 import { useAuth } from '../../hooks/useAuth'
-import type { Conversation } from '../../types/chat'
+import type { Conversation, Message } from '../../types/chat'
 import MessageBubble from './MessageBubble'
 import MessageComposer from './MessageComposer'
 
 interface Props {
   conversation: Conversation
+}
+
+interface VisibleMessage {
+  message: Message
+  animate: boolean
 }
 
 export default function MessageThread({ conversation }: Props) {
@@ -23,10 +36,62 @@ export default function MessageThread({ conversation }: Props) {
     account?.type === 'store' ? 'store' : 'user'
 
   const scrollRef = useRef<HTMLDivElement | null>(null)
+  const revealTimerRef = useRef<number | null>(null)
+  const revealQueueRef = useRef<Message[]>([])
+  const [visibleMessages, setVisibleMessages] = useState<VisibleMessage[]>([])
+
+  useEffect(() => {
+    setVisibleMessages(messages.map(message => ({ message, animate: false })))
+    revealQueueRef.current = []
+    if (revealTimerRef.current !== null) {
+      window.clearTimeout(revealTimerRef.current)
+      revealTimerRef.current = null
+    }
+  }, [conversation.id])
+
+  useEffect(() => {
+    const visibleIds = visibleMessages.map(item => item.message.id)
+    const nextIds = messages.map(message => message.id)
+
+    if (sameIds(visibleIds, nextIds)) return
+
+    if (
+      visibleMessages.length === 0 ||
+      messages.length < visibleMessages.length ||
+      !isPrefix(visibleIds, nextIds)
+    ) {
+      revealQueueRef.current = []
+      if (revealTimerRef.current !== null) {
+        window.clearTimeout(revealTimerRef.current)
+        revealTimerRef.current = null
+      }
+      setVisibleMessages(messages.map(message => ({ message, animate: false })))
+      return
+    }
+
+    const queuedIds = new Set(revealQueueRef.current.map(message => message.id))
+    const appended = messages
+      .slice(visibleMessages.length)
+      .filter(message => !queuedIds.has(message.id))
+
+    if (appended.length === 0) return
+
+    revealQueueRef.current = [...revealQueueRef.current, ...appended]
+    queueNextReveal(revealQueueRef, revealTimerRef, viewerType, setVisibleMessages)
+  }, [messages, viewerType, visibleMessages])
+
   useEffect(() => {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [messages.length])
+  }, [visibleMessages.length])
+
+  useEffect(() => {
+    return () => {
+      if (revealTimerRef.current !== null) {
+        window.clearTimeout(revealTimerRef.current)
+      }
+    }
+  }, [])
 
   const partnerName =
     conversation.type === 'user_system'
@@ -53,8 +118,13 @@ export default function MessageThread({ conversation }: Props) {
             No messages yet. Say hello!
           </div>
         ) : (
-          messages.map(m => (
-            <MessageBubble key={m.id} message={m} viewerType={viewerType} />
+          visibleMessages.map(({ message, animate }) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              viewerType={viewerType}
+              animate={animate}
+            />
           ))
         )}
       </div>
@@ -66,4 +136,45 @@ export default function MessageThread({ conversation }: Props) {
       />
     </div>
   )
+}
+
+function queueNextReveal(
+  revealQueueRef: MutableRefObject<Message[]>,
+  revealTimerRef: MutableRefObject<number | null>,
+  viewerType: 'user' | 'store',
+  setVisibleMessages: Dispatch<SetStateAction<VisibleMessage[]>>,
+) {
+  if (revealTimerRef.current !== null || revealQueueRef.current.length === 0) return
+
+  const nextMessage = revealQueueRef.current[0]
+  revealTimerRef.current = window.setTimeout(() => {
+    revealTimerRef.current = null
+    const revealed = revealQueueRef.current.shift()
+    if (!revealed) return
+    setVisibleMessages(prev => [...prev, { message: revealed, animate: true }])
+    queueNextReveal(revealQueueRef, revealTimerRef, viewerType, setVisibleMessages)
+  }, revealDelay(nextMessage, viewerType))
+}
+
+function revealDelay(message: Message, viewerType: 'user' | 'store') {
+  if (isOwnMessage(message, viewerType)) return 0
+  if (message.sender_type === 'bot' || message.sender_type === 'system') return 220
+  return 120
+}
+
+function isOwnMessage(message: Message, viewerType: 'user' | 'store') {
+  return (
+    (viewerType === 'user' && message.sender_type === 'user') ||
+    (viewerType === 'store' && message.sender_type === 'store')
+  )
+}
+
+function sameIds(left: string[], right: string[]) {
+  if (left.length !== right.length) return false
+  return left.every((id, index) => id === right[index])
+}
+
+function isPrefix(prefix: string[], full: string[]) {
+  if (prefix.length > full.length) return false
+  return prefix.every((id, index) => id === full[index])
 }

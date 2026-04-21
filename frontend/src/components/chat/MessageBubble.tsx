@@ -1,4 +1,5 @@
 import clsx from 'clsx'
+import { useEffect, useState } from 'react'
 import type { Message, SenderType } from '../../types/chat'
 import ProductRefCard from './ProductRefCard'
 import OrderRefCard from './OrderRefCard'
@@ -6,19 +7,35 @@ import OrderRefCard from './OrderRefCard'
 interface Props {
   message: Message
   viewerType: 'user' | 'store'
+  animate?: boolean
 }
 
-export default function MessageBubble({ message, viewerType }: Props) {
+export default function MessageBubble({
+  message,
+  viewerType,
+  animate = false,
+}: Props) {
   const side = alignment(message.sender_type, viewerType)
   const showRef =
     message.ref_type === 'product' ||
     message.ref_type === 'order' ||
     message.ref_type === 'order_event'
+  const [entered, setEntered] = useState(!animate)
+
+  useEffect(() => {
+    if (!animate) return
+    setEntered(false)
+    const frame = window.requestAnimationFrame(() => {
+      setEntered(true)
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [animate, message.id])
 
   return (
     <div
       className={clsx(
-        'flex w-full',
+        'flex w-full transition-all duration-200 ease-out',
+        entered ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0',
         side === 'right' ? 'justify-end' : 'justify-start',
       )}
     >

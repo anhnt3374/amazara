@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import app.db.base  # noqa: F401
-from app.api.v1.endpoints.chat import send_message_as_user
+from app.api.v1.endpoints.chat import list_messages_as_user, send_message_as_user
 from app.api.v1.endpoints.chat_ws import _handle_send
 from app.crud.conversation import get_or_create_user_store, get_or_create_user_system
 from app.models.base import Base
@@ -135,6 +135,29 @@ class ChatLangGraphRoutingTest(unittest.TestCase):
             .one()
         )
         self.assertEqual(bot_msg.content, "The sum is 60.")
+
+    def test_list_messages_as_user_returns_saved_history(self) -> None:
+        conv = get_or_create_user_system(self.session, self.user.id)
+        asyncio.run(
+            send_message_as_user(
+                conv.id,
+                SendMessageRequest(content="hello assistant"),
+                db=self.session,
+                current_user=self.user,
+            )
+        )
+
+        msgs = list_messages_as_user(
+            conv.id,
+            limit=50,
+            before=None,
+            db=self.session,
+            current_user=self.user,
+        )
+
+        self.assertEqual(len(msgs), 2)
+        self.assertEqual(msgs[0].content, "hello assistant")
+        self.assertEqual(msgs[1].content, "Hello! How can I help you today?")
 
     def test_websocket_handler_with_digits_returns_sum(self) -> None:
         conv = get_or_create_user_system(self.session, self.user.id)
