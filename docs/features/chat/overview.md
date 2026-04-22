@@ -18,7 +18,7 @@ There is **no** user-user or store-store chat. Stores do not receive the floatin
 
 - **Transport:** REST for fetching history + WebSocket for real-time delivery.
 - **Delivery fan-out:** every new message is broadcast to the user's WS connections and (if present) the store's WS connections via an in-memory `ConnectionManager`.
-- **Bot backend:** `BotEngine` is a Strategy interface. The default implementation is `LangGraphEngine`, which routes deterministic mock behaviors for the system conversation and emits LangSmith traces when enabled. The placeholder engine still exists as a fallback behind `BOT_ENGINE=placeholder`.
+- **Bot backend:** `BotEngine` is a Strategy interface. The default local-safe implementation is a deterministic stub engine, while `BOT_ENGINE=groq` enables a Groq-backed assistant runtime using `openai/gpt-oss-120b`. The assistant now returns structured chat blocks for supported tasks instead of text-only mock replies.
 - **Frontend send path:** the frontend sends messages over REST, then relies on WS fan-out for real-time updates and bot/system delivery.
 - **Primary UI entry points:** buyer routes are `/messages` and `/messages/:conversationId`; the store route is `/store/messages`; the floating widget opens for guests and users, but only users can enter the messages tab.
 - **No chat search, typing indicators, edit/delete, or attachments.**
@@ -33,11 +33,14 @@ There is **no** user-user or store-store chat. Stores do not receive the floatin
 - `backend/app/crud/conversation.py` — `get_or_create_user_store`, `get_or_create_user_system`, `list_by_user`, `list_by_store`, `touch_last_message`, `mark_read`, `unread_count`, `is_participant`.
 - `backend/app/crud/message.py` — `create_message`, `list_by_conversation`, `last_message`.
 - `backend/app/services/chat/bot_engine.py` — `BotEngine` ABC + engine selection via `BOT_ENGINE`.
-- `backend/app/services/chat/langgraph_engine.py` — LangGraph workflow for system-chat routing and mock replies.
+- `backend/app/services/chat/groq_engine.py` — Groq API integration for reasoning and strict JSON decisions.
+- `backend/app/services/chat/assistant_tools.py` — tool execution for search, order draft preparation, and order confirmation.
+- `backend/app/services/chat/langgraph_engine.py` — legacy deterministic LangGraph workflow kept as a compatible engine.
 - `backend/app/services/chat/system_reply_service.py` — shared REST/WS helper that persists and broadcasts system replies.
 - `backend/app/services/chat/connection_manager.py` — async in-memory connection registry keyed by `(account_type, account_id)`.
 - `backend/app/services/chat/notification_service.py` — `notify_order_created`, `notify_order_status_changed`, `notify_order_cancelled`.
 - `backend/app/api/v1/endpoints/chat.py` — REST endpoints under `/api/v1/chats`.
+- `backend/app/models/assistant_order_draft.py` — persisted order drafts used between "confirm" clicks and final order creation.
 - `backend/app/api/v1/endpoints/chat_ws.py` — WebSocket at `/api/v1/ws/chat?token=...`.
 - `backend/alembic/versions/d7e8f1a2b3c4_add_chat_tables.py` — creates `conversations` + `messages`.
 
@@ -80,6 +83,7 @@ Unique: `(user_id, store_id, type)`.
 | ref_type | ENUM(`product`, `order`, `order_event`) NULL | |
 | ref_id | CHAR(36) NULL | product/order id (NULL for `order_event` — payload carries the data) |
 | ref_payload | JSON NULL | event snapshot, e.g. `{old,new,order_code,title}` |
+| assistant_payload | JSON NULL | structured assistant block payload for carousel / confirmation / order result |
 | created_at | DATETIME | indexed with `conversation_id` for history paging |
 
 ## Statuses & unread
@@ -96,7 +100,8 @@ At the frontend layer, `ChatContext` also keeps an `unreadTotal` badge for the u
 ## Intentional gaps (not bugs)
 
 - **No chat between two users or two stores.** There is no endpoint, no UI, and no data model for it.
-- **Bot replies are deterministic mocks in v1.** The system conversation uses LangGraph routing: queries without digits return a greeting, and queries with digits return the sum of all signed integers found in the message.
+- **Assistant support is intentionally narrow in v1.** The system conversation supports one-message product search, one-message order draft preparation by `product.id`, and a confirm-order action that reuses the existing order creation service.
+- **Order confirmation requires a saved address.** If the user has no saved address, the assistant returns guidance instead of an order confirmation card.
 - **No message history paging UI yet.** `GET /chats/{id}/messages?limit=&before=` supports it; the frontend fetches the latest 100 and does not paginate further.
 - **System conversation has no "close"** — it always exists for every user who hits `GET /chats`.
 - **WebSocket is not the primary send path in the UI.** The browser keeps the socket open for incoming messages and read events, but outbound messages still go through the REST endpoints.

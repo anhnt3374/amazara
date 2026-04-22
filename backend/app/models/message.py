@@ -49,6 +49,7 @@ class Message(Base, UUIDMixin):
     )
     ref_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     ref_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    assistant_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )

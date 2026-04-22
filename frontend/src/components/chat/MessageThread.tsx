@@ -102,11 +102,6 @@ export default function MessageThread({ conversation }: Props) {
     <div className="flex-1 flex flex-col min-h-0 bg-white">
       <div className="h-14 border-b border-sand flex items-center px-5 shrink-0">
         <span className="text-sm font-semibold text-plum">{partnerName}</span>
-        {conversation.type === 'user_system' && (
-          <span className="ml-2 text-[11px] text-olive">
-            Automated responses — real assistant coming soon.
-          </span>
-        )}
       </div>
 
       <div
@@ -124,6 +119,15 @@ export default function MessageThread({ conversation }: Props) {
               message={message}
               viewerType={viewerType}
               animate={animate}
+              onAssistantAction={
+                viewerType === 'user'
+                  ? (actionId, data) =>
+                      chat.runAssistantAction(conversation.id, {
+                        action_id: actionId,
+                        data: data ?? null,
+                      })
+                  : undefined
+              }
             />
           ))
         )}

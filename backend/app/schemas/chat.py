@@ -24,6 +24,7 @@ class MessageOut(BaseModel):
     ref_type: MessageRefType | None
     ref_id: str | None
     ref_payload: dict[str, Any] | None
+    assistant_payload: dict[str, Any] | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -72,3 +73,8 @@ class WsServerMessage(BaseModel):
 class WsServerError(BaseModel):
     type: Literal["error"] = "error"
     detail: str
+
+
+class AssistantActionRequest(BaseModel):
+    action_id: str
+    data: dict[str, Any] | None = None

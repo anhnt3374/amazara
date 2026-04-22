@@ -16,6 +16,7 @@ def create_message(
     ref_type: MessageRefType | None = None,
     ref_id: str | None = None,
     ref_payload: dict[str, Any] | None = None,
+    assistant_payload: dict[str, Any] | None = None,
 ) -> Message:
     msg = Message(
         conversation_id=conversation_id,
@@ -25,6 +26,7 @@ def create_message(
         ref_type=ref_type,
         ref_id=ref_id,
         ref_payload=ref_payload,
+        assistant_payload=assistant_payload,
         created_at=datetime.now(timezone.utc).replace(tzinfo=None),
     )
     db.add(msg)

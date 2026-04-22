@@ -14,6 +14,7 @@ except ImportError:  # pragma: no cover - dependency is installed in app runtime
 
 from app.models.message import Message
 from app.models.user import User
+from app.services.chat.assistant_types import AssistantDecision
 from app.services.chat.bot_engine import BotEngine
 
 GREETING_REPLY = "Hello! How can I help you today?"
@@ -56,7 +57,7 @@ class LangGraphEngine(BotEngine):
         history: list[Message],
         *,
         transport: str = "unknown",
-    ) -> str | None:
+    ) -> AssistantDecision:
         conversation_id = history[-1].conversation_id if history else f"user:{user.id}"
         result = self._invoke_graph(
             {
@@ -67,7 +68,8 @@ class LangGraphEngine(BotEngine):
             user_id=user.id,
             transport=transport,
         )
-        return result.get("response")
+        response = result.get("response") or GREETING_REPLY
+        return AssistantDecision(action="plain_reply", reply_text=response)
 
     def _route_query(self, state: ChatGraphState) -> ChatGraphState:
         return {"numbers": _extract_numbers(state["query"])}
