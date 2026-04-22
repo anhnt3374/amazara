@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../hooks/useAuth'
 import { useChatSocket } from '../hooks/useChatSocket'
 import {
+  submitAssistantAction,
   listMessagesAsStore,
   listMessagesAsUser,
   listMyConversations,
@@ -22,6 +23,7 @@ import {
   sendMessageAsUser,
 } from '../services/chat'
 import type {
+  AssistantActionPayload,
   Conversation,
   Message,
   SendMessagePayload,
@@ -36,6 +38,10 @@ interface ChatContextValue {
   refreshConversations: () => Promise<void>
   loadMessages: (conversationId: string) => Promise<Message[]>
   sendMessage: (conversationId: string, payload: SendMessagePayload) => Promise<void>
+  runAssistantAction: (
+    conversationId: string,
+    payload: AssistantActionPayload,
+  ) => Promise<void>
   markRead: (conversationId: string) => Promise<void>
   openWithStore: (storeId: string) => Promise<Conversation>
   openSystem: () => Promise<Conversation>
@@ -153,6 +159,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     [account, handleIncoming, token],
   )
 
+  const runAssistantAction = useCallback(
+    async (conversationId: string, payload: AssistantActionPayload) => {
+      if (!token || !account || account.type !== 'user') return
+      const msg = await submitAssistantAction(token, conversationId, payload)
+      handleIncoming(conversationId, msg)
+    },
+    [account, handleIncoming, token],
+  )
+
   const markRead = useCallback(
     async (conversationId: string) => {
       if (!token || !account) return
@@ -214,6 +229,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     refreshConversations,
     loadMessages,
     sendMessage,
+    runAssistantAction,
     markRead,
     openWithStore,
     openSystem,

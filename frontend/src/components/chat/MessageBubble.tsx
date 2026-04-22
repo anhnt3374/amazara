@@ -3,17 +3,22 @@ import { useEffect, useState } from 'react'
 import type { Message, SenderType } from '../../types/chat'
 import ProductRefCard from './ProductRefCard'
 import OrderRefCard from './OrderRefCard'
+import AssistantProductCarousel from './AssistantProductCarousel'
+import AssistantOrderConfirmationCard from './AssistantOrderConfirmationCard'
+import AssistantOrderResultCard from './AssistantOrderResultCard'
 
 interface Props {
   message: Message
   viewerType: 'user' | 'store'
   animate?: boolean
+  onAssistantAction?: (actionId: string, data?: Record<string, unknown>) => Promise<void>
 }
 
 export default function MessageBubble({
   message,
   viewerType,
   animate = false,
+  onAssistantAction,
 }: Props) {
   const side = alignment(message.sender_type, viewerType)
   const showRef =
@@ -60,6 +65,24 @@ export default function MessageBubble({
                 orderId={message.ref_id}
                 payload={message.ref_payload}
               />
+            )}
+          </div>
+        )}
+        {message.assistant_payload && (
+          <div className="mb-2">
+            {message.assistant_payload.type === 'product_carousel' && (
+              <AssistantProductCarousel payload={message.assistant_payload} />
+            )}
+            {message.assistant_payload.type === 'order_confirmation' && onAssistantAction && (
+              <AssistantOrderConfirmationCard
+                payload={message.assistant_payload}
+                onConfirm={draftId =>
+                  onAssistantAction('confirm_order', { draft_id: draftId })
+                }
+              />
+            )}
+            {message.assistant_payload.type === 'order_result' && (
+              <AssistantOrderResultCard payload={message.assistant_payload} />
             )}
           </div>
         )}

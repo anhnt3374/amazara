@@ -1,5 +1,6 @@
 import { ApiError } from './auth'
 import type {
+  AssistantActionPayload,
   Conversation,
   Message,
   SendMessagePayload,
@@ -121,6 +122,22 @@ export function sendMessageAsStore(
       body: JSON.stringify(payload),
     },
     'Failed to send message',
+  )
+}
+
+export function submitAssistantAction(
+  token: string,
+  conversationId: string,
+  payload: AssistantActionPayload,
+): Promise<Message> {
+  return jsonFetch<Message>(
+    `/chats/${conversationId}/assistant-action`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+      body: JSON.stringify(payload),
+    },
+    'Failed to run assistant action',
   )
 }
 

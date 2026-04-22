@@ -18,7 +18,8 @@ All REST endpoints live under `/api/v1/chats`. All require a Bearer token except
 | POST | `/chats/system` | user | Get-or-create the user's system conversation. |
 | POST | `/chats/with-store/{store_id}` | user | Get-or-create the user-store conversation. |
 | GET | `/chats/{conversation_id}/messages?limit=&before=` | user | Load messages (descending, then reversed; paged via `before=<message_id>`). |
-| POST | `/chats/{conversation_id}/messages` | user | Send a message as the user. Triggers LangGraph-backed bot routing if conversation type is `user_system`. Broadcasts via WS. |
+| POST | `/chats/{conversation_id}/messages` | user | Send a message as the user. Triggers the configured assistant engine if conversation type is `user_system`. Broadcasts via WS. |
+| POST | `/chats/{conversation_id}/assistant-action` | user | Submit a structured assistant action such as confirm-order for the system conversation. |
 | POST | `/chats/{conversation_id}/read` | user | Mark the user's last-read timestamp. |
 
 ### Store-side
@@ -54,7 +55,19 @@ All REST endpoints live under `/api/v1/chats`. All require a Bearer token except
   "ref_type": "product | order | order_event | null",
   "ref_id": "uuid | null",
   "ref_payload": {"key": "value"} | null,
+  "assistant_payload": {"type": "product_carousel"} | null,
   "created_at": "ISO-8601"
+}
+```
+
+`AssistantActionRequest`:
+
+```json
+{
+  "action_id": "confirm_order",
+  "data": {
+    "draft_id": "uuid"
+  }
 }
 ```
 
@@ -122,9 +135,11 @@ Errors are soft (sent as a JSON frame, socket stays open) unless auth fails at c
 
 ## System assistant runtime
 
-- Default engine: `BOT_ENGINE=langgraph`
+- Default local-safe engine: `BOT_ENGINE=stub`
+- Groq engine: `BOT_ENGINE=groq`
+- Groq env vars: `GROQ_API_KEY`, `GROQ_MODEL` (default `openai/gpt-oss-120b`), optional `GROQ_BASE_URL`
 - Observability env vars: `LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT`
-- The current LangGraph workflow is deterministic and does not call an external LLM provider.
+- The Groq runtime returns strict JSON decisions, and backend tool execution turns those decisions into structured assistant payloads such as `product_carousel`, `order_confirmation`, and `order_result`.
 
 ## Order → system notifications
 

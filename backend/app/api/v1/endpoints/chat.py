@@ -22,11 +22,13 @@ from app.models.message import SenderType
 from app.models.store import Store
 from app.models.user import User
 from app.schemas.chat import (
+    AssistantActionRequest,
     ConversationOut,
     MessageOut,
     PartnerInfo,
     SendMessageRequest,
 )
+from app.services.chat.assistant_tools import execute_confirm_order
 from app.services.chat.connection_manager import get_connection_manager
 from app.services.chat.system_reply_service import maybe_send_system_reply
 
@@ -222,6 +224,50 @@ async def send_message_as_user(
         transport="rest",
         broadcaster=_broadcast_message,
     )
+    return out
+
+
+@router.post("/{conversation_id}/assistant-action", response_model=MessageOut)
+async def submit_assistant_action(
+    conversation_id: str,
+    body: AssistantActionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    conv = _resolve_participant(db, conversation_id, user_id=current_user.id)
+    if conv.type != ConversationType.user_system:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Assistant actions are only supported in the system conversation",
+        )
+    if body.action_id != "confirm_order":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Unsupported assistant action",
+        )
+    draft_id = (body.data or {}).get("draft_id")
+    if not isinstance(draft_id, str) or not draft_id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="draft_id is required",
+        )
+    result = execute_confirm_order(
+        db,
+        conversation_id=conv.id,
+        user=current_user,
+        draft_id=draft_id,
+    )
+    msg = create_message(
+        db,
+        conversation_id=conv.id,
+        sender_type=SenderType.bot,
+        sender_id=None,
+        content=result.text,
+        assistant_payload=result.assistant_payload,
+    )
+    touch_last_message(db, conv, msg.created_at)
+    out = MessageOut.model_validate(msg)
+    await _broadcast_message(conv, out)
     return out
 
 

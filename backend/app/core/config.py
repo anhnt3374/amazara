@@ -21,6 +21,9 @@ class Settings(BaseSettings):
 
     # Chat
     BOT_ENGINE: str = "langgraph"
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
+    GROQ_BASE_URL: str = "https://api.groq.com/openai/v1/chat/completions"
     LANGSMITH_TRACING: bool = False
     LANGSMITH_API_KEY: str = ""
     LANGSMITH_PROJECT: str = "shope-chat"
