@@ -32,6 +32,17 @@ class Settings(BaseSettings):
     LANGSMITH_API_KEY: str = Field()
     LANGSMITH_PROJECT: str = Field()
 
+    # Embeddings
+    EMBEDDING_QWEN_ENABLED: bool = Field(default=True)
+    EMBEDDING_QWEN_MODEL_ID: str = Field(default="Qwen/Qwen3-Embedding-0.6B")
+    EMBEDDING_FG_CLIP_ENABLED: bool = Field(default=True)
+    EMBEDDING_FG_CLIP_MODEL_ID: str = Field(default="qihoo360/fg-clip2-base")
+    EMBEDDING_COLLECTION_PREFIX: str = Field(default="shope")
+    EMBEDDING_MILVUS_URI: str = Field(default="http://localhost:19530")
+    EMBEDDING_QUERY_TOP_K: int = Field(default=20)
+    EMBEDDING_INDEX_ASYNC: bool = Field(default=True)
+    EMBEDDING_BATCH_SIZE: int = Field(default=16)
+
     @property
     def DATABASE_URL(self) -> str:
         return (
