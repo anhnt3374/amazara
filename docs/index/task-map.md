@@ -75,6 +75,15 @@ Use this file when you have a concrete task. Each entry lists the exact files to
 
 ---
 
+## Work on Semantic Search / Embeddings
+
+**Task:** Add, debug, or extend embedding and vector-search infrastructure
+1. `docs/features/embedding/overview.md` — embedding models, document shape, lifecycle hooks
+2. `docs/features/backend/overview.md` — backend layer responsibilities
+3. `docs/features/database/overview.md` — Milvus role in the stack
+
+---
+
 ## Debug Auth on Frontend
 
 **Task:** Session not restoring, redirect loops, token issues

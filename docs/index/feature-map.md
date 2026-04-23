@@ -87,6 +87,18 @@ Use this file to find the right docs for a given question. Match your keyword to
 
 ---
 
+## embedding
+**Keywords:** embedding, semantic search, vector search, Milvus, Qwen, fg-clip, multimodal, indexing
+
+| Question type | Read |
+|---|---|
+| What is the embedding module for? | `docs/features/embedding/overview.md` |
+| Which embedding models are supported? | `docs/features/embedding/overview.md` |
+| How is a product represented for embeddings? | `docs/features/embedding/overview.md` |
+| How will indexing hook into future product uploads? | `docs/features/embedding/overview.md` |
+
+---
+
 ## setup / architecture
 **Keywords:** install, docker, makefile, .env, port, monorepo, quick start, requirements, seed, mock, csv, json
 
