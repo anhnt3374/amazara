@@ -1,32 +1,36 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=("backend/.env", ".env"),
+        extra="ignore",
+    )
 
     # Database
-    MYSQL_HOST: str = "localhost"
-    MYSQL_PORT: int = 3306
-    MYSQL_USER: str = "shope"
-    MYSQL_PASSWORD: str = "shope_password"
-    MYSQL_DATABASE: str = "shope_db"
+    MYSQL_HOST: str = Field()
+    MYSQL_PORT: int = Field()
+    MYSQL_USER: str = Field()
+    MYSQL_PASSWORD: str = Field()
+    MYSQL_DATABASE: str = Field()
 
     # JWT
-    SECRET_KEY: str = "change_me_in_production"
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    SECRET_KEY: str = Field()
+    ALGORITHM: str = Field()
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field()
 
     # App
-    APP_ENV: str = "development"
+    APP_ENV: str = Field()
 
     # Chat
-    BOT_ENGINE: str = "langgraph"
-    GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "openai/gpt-oss-120b"
-    GROQ_BASE_URL: str = "https://api.groq.com/openai/v1/chat/completions"
-    LANGSMITH_TRACING: bool = False
-    LANGSMITH_API_KEY: str = ""
-    LANGSMITH_PROJECT: str = "shope-chat"
+    BOT_ENGINE: str = Field()
+    GROQ_API_KEY: str = Field()
+    GROQ_MODEL: str = Field()
+    GROQ_BASE_URL: str = Field()
+    LANGSMITH_TRACING: bool = Field()
+    LANGSMITH_API_KEY: str = Field()
+    LANGSMITH_PROJECT: str = Field()
 
     @property
     def DATABASE_URL(self) -> str:

@@ -139,7 +139,8 @@ Errors are soft (sent as a JSON frame, socket stays open) unless auth fails at c
 - Groq engine: `BOT_ENGINE=groq`
 - Groq env vars: `GROQ_API_KEY`, `GROQ_MODEL` (default `openai/gpt-oss-120b`), optional `GROQ_BASE_URL`
 - Observability env vars: `LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT`
-- The Groq runtime returns strict JSON decisions, and backend tool execution turns those decisions into structured assistant payloads such as `product_carousel`, `order_confirmation`, and `order_result`.
+- The Groq runtime returns strict JSON decisions, and backend tool execution turns those decisions into structured assistant payloads such as `product_carousel`, `product_info`, `order_confirmation`, and `order_result`.
+- If Groq returns a partial payload with only `product_id`, backend normalization now defaults that response to `view_product` rather than `prepare_order`.
 
 ## Order → system notifications
 

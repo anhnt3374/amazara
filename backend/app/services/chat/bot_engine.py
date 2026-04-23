@@ -49,10 +49,16 @@ class StaticStubEngine(BotEngine):
     async def reply(self, user, user_message, history, *, transport="unknown"):
         product_match = PRODUCT_ID_RE.search(user_message)
         if product_match:
+            normalized = user_message.lower()
+            if any(term in normalized for term in ("order", "buy", "purchase")):
+                return AssistantDecision(
+                    action="prepare_order",
+                    product_id=product_match.group(0),
+                    quantity=_extract_quantity(user_message),
+                )
             return AssistantDecision(
-                action="prepare_order",
+                action="view_product",
                 product_id=product_match.group(0),
-                quantity=_extract_quantity(user_message),
             )
         query = user_message.strip()
         if query:

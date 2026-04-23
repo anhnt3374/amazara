@@ -38,6 +38,8 @@ Key variables in `backend/.env`:
 ```env
 MYSQL_PASSWORD=shope_password
 SECRET_KEY=<strong random string>
+BOT_ENGINE=groq
+GROQ_API_KEY=<your groq api key>
 ```
 
 Generate a secure `SECRET_KEY`:

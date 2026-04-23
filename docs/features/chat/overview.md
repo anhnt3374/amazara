@@ -100,7 +100,7 @@ At the frontend layer, `ChatContext` also keeps an `unreadTotal` badge for the u
 ## Intentional gaps (not bugs)
 
 - **No chat between two users or two stores.** There is no endpoint, no UI, and no data model for it.
-- **Assistant support is intentionally narrow in v1.** The system conversation supports one-message product search, one-message order draft preparation by `product.id`, and a confirm-order action that reuses the existing order creation service.
+- **Assistant support is intentionally narrow in v1.** The system conversation supports one-message product search, product detail lookup by `product.id`, one-message order draft preparation by `product.id`, and a confirm-order action that reuses the existing order creation service.
 - **Order confirmation requires a saved address.** If the user has no saved address, the assistant returns guidance instead of an order confirmation card.
 - **No message history paging UI yet.** `GET /chats/{id}/messages?limit=&before=` supports it; the frontend fetches the latest 100 and does not paginate further.
 - **System conversation has no "close"** — it always exists for every user who hits `GET /chats`.

@@ -4,6 +4,7 @@ import type { Message, SenderType } from '../../types/chat'
 import ProductRefCard from './ProductRefCard'
 import OrderRefCard from './OrderRefCard'
 import AssistantProductCarousel from './AssistantProductCarousel'
+import AssistantProductInfoCard from './AssistantProductInfoCard'
 import AssistantOrderConfirmationCard from './AssistantOrderConfirmationCard'
 import AssistantOrderResultCard from './AssistantOrderResultCard'
 
@@ -12,6 +13,7 @@ interface Props {
   viewerType: 'user' | 'store'
   animate?: boolean
   onAssistantAction?: (actionId: string, data?: Record<string, unknown>) => Promise<void>
+  onAssistantInsert?: (value: string) => void
 }
 
 export default function MessageBubble({
@@ -19,6 +21,7 @@ export default function MessageBubble({
   viewerType,
   animate = false,
   onAssistantAction,
+  onAssistantInsert,
 }: Props) {
   const side = alignment(message.sender_type, viewerType)
   const showRef =
@@ -71,7 +74,16 @@ export default function MessageBubble({
         {message.assistant_payload && (
           <div className="mb-2">
             {message.assistant_payload.type === 'product_carousel' && (
-              <AssistantProductCarousel payload={message.assistant_payload} />
+              <AssistantProductCarousel
+                payload={message.assistant_payload}
+                onAddToChat={onAssistantInsert}
+              />
+            )}
+            {message.assistant_payload.type === 'product_info' && (
+              <AssistantProductInfoCard
+                payload={message.assistant_payload}
+                onAddToChat={onAssistantInsert}
+              />
             )}
             {message.assistant_payload.type === 'order_confirmation' && onAssistantAction && (
               <AssistantOrderConfirmationCard

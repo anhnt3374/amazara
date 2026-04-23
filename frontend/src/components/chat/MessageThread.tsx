@@ -39,6 +39,7 @@ export default function MessageThread({ conversation }: Props) {
   const revealTimerRef = useRef<number | null>(null)
   const revealQueueRef = useRef<Message[]>([])
   const [visibleMessages, setVisibleMessages] = useState<VisibleMessage[]>([])
+  const [draftValue, setDraftValue] = useState('')
 
   useEffect(() => {
     setVisibleMessages(messages.map(message => ({ message, animate: false })))
@@ -47,6 +48,10 @@ export default function MessageThread({ conversation }: Props) {
       window.clearTimeout(revealTimerRef.current)
       revealTimerRef.current = null
     }
+  }, [conversation.id])
+
+  useEffect(() => {
+    setDraftValue('')
   }, [conversation.id])
 
   useEffect(() => {
@@ -98,6 +103,10 @@ export default function MessageThread({ conversation }: Props) {
       ? 'Amaraza Assistant'
       : conversation.partner.display_name
 
+  const handleInsertToChat = (value: string) => {
+    setDraftValue(prev => appendDraftToken(prev, value))
+  }
+
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-white">
       <div className="h-14 border-b border-sand flex items-center px-5 shrink-0">
@@ -128,18 +137,26 @@ export default function MessageThread({ conversation }: Props) {
                       })
                   : undefined
               }
+              onAssistantInsert={viewerType === 'user' ? handleInsertToChat : undefined}
             />
           ))
         )}
       </div>
 
       <MessageComposer
-        onSend={content =>
-          chat.sendMessage(conversation.id, { content })
-        }
+        value={draftValue}
+        onChange={setDraftValue}
+        onSend={content => chat.sendMessage(conversation.id, { content })}
       />
     </div>
   )
+}
+
+function appendDraftToken(current: string, token: string) {
+  const trimmed = current.trimEnd()
+  if (!trimmed) return token
+  if (trimmed.includes(token)) return trimmed
+  return `${trimmed} ${token}`
 }
 
 function queueNextReveal(

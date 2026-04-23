@@ -56,8 +56,12 @@ class ChatLangGraphRoutingTest(unittest.TestCase):
         self.session.refresh(self.user)
         self.session.refresh(self.store)
 
+        import app.services.chat.bot_engine as bot_engine
+
+        self.original_bot_engine = bot_engine.settings.BOT_ENGINE
+        bot_engine.settings.BOT_ENGINE = "langgraph"
         self._reset_bot_engine()
-        self.addCleanup(self._reset_bot_engine)
+        self.addCleanup(self._restore_bot_engine)
 
     def tearDown(self) -> None:
         self.session.close()
@@ -68,6 +72,12 @@ class ChatLangGraphRoutingTest(unittest.TestCase):
         import app.services.chat.bot_engine as bot_engine
 
         bot_engine._engine_cache = None
+
+    def _restore_bot_engine(self) -> None:
+        import app.services.chat.bot_engine as bot_engine
+
+        bot_engine.settings.BOT_ENGINE = self.original_bot_engine
+        self._reset_bot_engine()
 
     def test_get_bot_engine_respects_bot_engine_setting(self) -> None:
         import app.services.chat.bot_engine as bot_engine

@@ -6,6 +6,7 @@ from app.crud.address import get_addresses_by_user
 from app.crud.assistant_order_draft import create_draft, get_draft, mark_used
 from app.crud.order import create_order, get_order_by_id
 from app.crud.product import PAGE_SIZE, get_product_by_id, search_products
+from app.crud.review import get_review_aggregate
 from app.models.user import User
 from app.schemas.order import OrderCreate, OrderItemCreate
 from app.services.chat.assistant_types import AssistantExecutionResult
@@ -121,6 +122,43 @@ def execute_prepare_order(
                 "action_id": "confirm_order",
                 "draft_id": draft.id,
                 "label": "Confirm order",
+            },
+        },
+    )
+
+
+def execute_view_product(
+    db: Session,
+    *,
+    product_id: str,
+) -> AssistantExecutionResult:
+    product = get_product_by_id(db, product_id)
+    if not product:
+        return AssistantExecutionResult(text="I could not find that product code.")
+
+    category = product.category
+    brand = category.brand if category else None
+    aggregate = get_review_aggregate(db, product.id)
+    final_price = _effective_price(product.price, product.discount)
+    image = product.image.split("|")[0].strip() if product.image else None
+    description = (product.description or "").strip() or "No description available."
+    return AssistantExecutionResult(
+        text=f"Here is the product information for {product.name}.",
+        assistant_payload={
+            "type": "product_info",
+            "product": {
+                "product_id": product.id,
+                "name": product.name,
+                "image": image,
+                "price": product.price,
+                "discount": product.discount,
+                "final_price": final_price,
+                "stock": product.stock,
+                "brand_name": brand.name if brand else None,
+                "category_name": category.name if category else None,
+                "average_rating": aggregate["average"],
+                "review_count": aggregate["count"],
+                "description": description,
             },
         },
     )

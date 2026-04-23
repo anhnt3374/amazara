@@ -1,23 +1,44 @@
-import { useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import clsx from 'clsx'
 
 interface Props {
   disabled?: boolean
   placeholder?: string
+  value?: string
+  onChange?: (value: string) => void
   onSend: (content: string) => Promise<void> | void
 }
 
 export default function MessageComposer({
   disabled,
   placeholder = 'Type a message...',
+  value,
+  onChange,
   onSend,
 }: Props) {
-  const [value, setValue] = useState('')
+  const [internalValue, setInternalValue] = useState('')
   const [sending, setSending] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const currentValue = value ?? internalValue
+
+  useEffect(() => {
+    if (value === undefined || !textareaRef.current) return
+    textareaRef.current.focus()
+    const caret = value.length
+    textareaRef.current.setSelectionRange(caret, caret)
+  }, [value])
+
+  const setValue = (next: string) => {
+    if (onChange) {
+      onChange(next)
+      return
+    }
+    setInternalValue(next)
+  }
 
   const submit = async (e?: FormEvent) => {
     if (e) e.preventDefault()
-    const content = value.trim()
+    const content = currentValue.trim()
     if (!content || sending) return
     setSending(true)
     try {
@@ -41,7 +62,8 @@ export default function MessageComposer({
       className="flex items-end gap-2 border-t border-sand bg-white px-4 py-3"
     >
       <textarea
-        value={value}
+        ref={textareaRef}
+        value={currentValue}
         onChange={e => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         rows={1}
@@ -51,10 +73,10 @@ export default function MessageComposer({
       />
       <button
         type="submit"
-        disabled={disabled || sending || !value.trim()}
+        disabled={disabled || sending || !currentValue.trim()}
         className={clsx(
           'h-10 px-4 rounded-pin text-sm font-semibold transition-colors',
-          disabled || !value.trim()
+          disabled || !currentValue.trim()
             ? 'bg-sand text-warm-silver cursor-not-allowed'
             : 'bg-brand-red text-white hover:bg-[var(--color-brand-red-hover)]',
         )}

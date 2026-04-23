@@ -8,7 +8,11 @@ from app.models.conversation import Conversation, ConversationType
 from app.models.user import User
 from app.models.message import SenderType
 from app.schemas.chat import MessageOut
-from app.services.chat.assistant_tools import execute_prepare_order, execute_search
+from app.services.chat.assistant_tools import (
+    execute_prepare_order,
+    execute_search,
+    execute_view_product,
+)
 from app.services.chat.bot_engine import get_bot_engine
 
 
@@ -35,6 +39,11 @@ async def maybe_send_system_reply(
     if decision.action == "search_products":
         query = (decision.search_query or user_message).strip()
         result = execute_search(db, query)
+    elif decision.action == "view_product" and decision.product_id:
+        result = execute_view_product(
+            db,
+            product_id=decision.product_id,
+        )
     elif decision.action == "prepare_order" and decision.product_id:
         result = execute_prepare_order(
             db,

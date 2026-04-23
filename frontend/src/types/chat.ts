@@ -60,8 +60,27 @@ export interface OrderResultPayload {
   }
 }
 
+export interface ProductInfoPayload {
+  type: 'product_info'
+  product: {
+    product_id: string
+    name: string
+    image: string | null
+    price: number
+    discount: number
+    final_price: number
+    stock: number
+    brand_name: string | null
+    category_name: string | null
+    average_rating: number | null
+    review_count: number
+    description: string
+  }
+}
+
 export type AssistantPayload =
   | ProductCarouselPayload
+  | ProductInfoPayload
   | OrderConfirmationPayload
   | OrderResultPayload
 
