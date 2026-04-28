@@ -51,5 +51,19 @@ class InMemoryTTLCacheTest(unittest.TestCase):
         self.assertIsNone(asyncio.run(cache.get("k")))
 
 
+class RedisCacheFailureTest(unittest.TestCase):
+    def test_get_returns_none_on_connection_error(self) -> None:
+        from unittest.mock import AsyncMock, patch
+
+        from app.services.search.cache import RedisCache
+
+        cache = RedisCache("redis://localhost:1/0")
+        fake_client = AsyncMock()
+        fake_client.get.side_effect = ConnectionError("nope")
+        with patch.object(cache, "_conn", AsyncMock(return_value=fake_client)):
+            result = asyncio.run(cache.get("k"))
+        self.assertIsNone(result)
+
+
 if __name__ == "__main__":
     unittest.main()

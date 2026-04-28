@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import time
 from collections.abc import Iterable
 from typing import Protocol
 
 from cachetools import TTLCache
+import redis.asyncio as aioredis
+
+from app.services.search.exceptions import CacheUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -61,3 +65,56 @@ class InMemoryTTLCache:
 
     async def clear(self) -> None:
         self._cache.clear()
+
+
+class RedisCache:
+    def __init__(self, url: str) -> None:
+        self._url = url
+        self._client: aioredis.Redis | None = None
+
+    async def _conn(self) -> aioredis.Redis:
+        if self._client is None:
+            self._client = aioredis.from_url(self._url, decode_responses=True)
+        return self._client
+
+    async def get(self, key: str) -> RankedList | None:
+        try:
+            client = await self._conn()
+            raw = await client.get(key)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("redis get failed: %s", e)
+            return None
+        if raw is None:
+            return None
+        try:
+            data = json.loads(raw)
+            return [(pid, float(score)) for pid, score in data]
+        except (ValueError, TypeError) as e:
+            logger.warning("redis value decode failed: %s", e)
+            return None
+
+    async def set(self, key: str, value: RankedList, ttl: int) -> None:
+        try:
+            client = await self._conn()
+            await client.set(key, json.dumps(value), ex=ttl)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("redis set failed: %s", e)
+
+    async def clear(self) -> None:
+        try:
+            client = await self._conn()
+            await client.flushdb()
+        except Exception as e:  # noqa: BLE001
+            raise CacheUnavailable(f"redis clear failed: {e}") from e
+
+
+def build_cache_from_settings() -> SearchCache:
+    """Factory used by search_service. Reads settings at call time."""
+    from app.core.config import settings
+
+    if settings.SEMANTIC_CACHE_BACKEND == "redis":
+        return RedisCache(settings.REDIS_URL)
+    return InMemoryTTLCache(
+        max_entries=settings.SEMANTIC_CACHE_MAX_ENTRIES,
+        default_ttl_sec=settings.SEMANTIC_CACHE_TTL_SEC,
+    )
