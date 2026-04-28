@@ -3,6 +3,7 @@
         makemigrations migrate \
         run-backend run-frontend \
         docker-up docker-down docker-logs \
+        check-ml-env install-ml-cpu install-ml-gpu \
         seed
 
 help:
@@ -12,6 +13,12 @@ help:
 	@echo "  make makemigrations msg=x  Generate Alembic migration file from models"
 	@echo "  make migrate               Apply pending migrations to the database"
 	@echo "  make run-backend           Run FastAPI dev server (port 8000)"
+	@echo ""
+	@echo "Semantic Search"
+	@echo "  make install-ml-cpu        Install PyTorch (CPU) and ML deps"
+	@echo "  make install-ml-gpu        Install PyTorch (CUDA 12.4) and ML deps"
+	@echo "  make check-ml-env          Smoke-test ML stack (loads BGE encoder)"
+	@echo "  make reindex               Rebuild Milvus collections from MySQL products"
 	@echo ""
 	@echo "Frontend"
 	@echo "  make install-frontend      Install Node packages (npm install)"
@@ -50,6 +57,19 @@ install-frontend:
 
 run-frontend:
 	cd frontend && npm run dev
+
+# ── Semantic search ───────────────────────────────────────────────────────────
+
+check-ml-env:
+	cd backend && ../backend/venv/bin/python scripts/check_ml_env.py
+
+install-ml-cpu:
+	backend/venv/bin/pip install --index-url https://download.pytorch.org/whl/cpu torch==2.6.0+cpu torchvision==0.21.0+cpu
+	backend/venv/bin/pip install -r backend/requirements-ml.txt
+
+install-ml-gpu:
+	backend/venv/bin/pip install --index-url https://download.pytorch.org/whl/cu124 torch==2.6.0+cu124 torchvision==0.21.0+cu124
+	backend/venv/bin/pip install -r backend/requirements-ml.txt
 
 # ── Docker ────────────────────────────────────────────────────────────────────
 
