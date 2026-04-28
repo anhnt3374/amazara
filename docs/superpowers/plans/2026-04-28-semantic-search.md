@@ -98,9 +98,15 @@ pillow==10.4.0
 numpy==1.26.4
 einops==0.8.0
 pymilvus==2.4.9
+marshmallow==3.21.3
 cachetools==5.5.0
 redis==5.2.0
 ```
+
+> **marshmallow note:** pymilvus 2.4.9 transitively depends on `environs`, which
+> only works with marshmallow 3.x (uses `__version_info__`, removed in
+> marshmallow 4). Without this pin, pip resolves to 4.x and pymilvus import
+> fails at runtime.
 
 - [ ] **Step 3: Replace `backend/requirements.txt` to delegate**
 

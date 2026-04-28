@@ -426,6 +426,7 @@ pillow==10.4.0
 numpy==1.26.4
 einops==0.8.0
 pymilvus==2.4.9
+marshmallow==3.21.3
 cachetools==5.5.0
 redis==5.2.0
 ```
@@ -439,6 +440,7 @@ redis==5.2.0
 | `numpy==1.26.4` | Avoid numpy 2 ABI mix; safest under transformers 4.46. |
 | `sentence-transformers==3.3.1` | Compatible with transformers 4.46 and torch 2.6. |
 | `pymilvus==2.4.9` | Matches Milvus server `v2.4.1` already pinned in docker-compose. |
+| `marshmallow==3.21.3` | pymilvus 2.4.9 transitively requires `environs`, which only works with marshmallow 3.x (uses `__version_info__`, removed in marshmallow 4). Without this pin, pip resolves to marshmallow 4 and pymilvus import fails. |
 | `pillow==10.4.0` | Required by torchvision 0.21; avoids 11.x wheel issues on 3.13. |
 
 ### 10.3 GPU vs CPU wheel
