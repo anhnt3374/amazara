@@ -89,8 +89,8 @@ langsmith>=0.3,<1
 - [ ] **Step 2: Create `backend/requirements-ml.txt`**
 
 ```
-torch==2.5.1
-torchvision==0.20.1
+torch==2.6.0
+torchvision==0.21.0
 transformers==4.46.3
 sentence-transformers==3.3.1
 huggingface-hub==0.26.2
@@ -115,9 +115,16 @@ Run:
 ```bash
 backend/venv/bin/pip install --upgrade pip
 backend/venv/bin/pip install -r backend/requirements-base.txt
-backend/venv/bin/pip install --index-url https://download.pytorch.org/whl/cpu torch==2.5.1 torchvision==0.20.1
+backend/venv/bin/pip install --index-url https://download.pytorch.org/whl/cpu torch==2.6.0+cpu torchvision==0.21.0+cpu
 backend/venv/bin/pip install -r backend/requirements-ml.txt
 ```
+
+> **Pin note:** torch 2.6.0 + torchvision 0.21.0 is the lowest pair that ships
+> Python 3.13 CPU wheels on `download.pytorch.org/whl/cpu`. The earlier draft
+> of this plan used 2.5.1 / 0.20.1, but those have no cp313 wheels. The `+cpu`
+> local-version suffix is required when pulling from this index. After this
+> step, pip will see torch/torchvision already installed at the right versions
+> when processing `requirements-ml.txt` and skip them.
 
 Expected: all packages install without resolver errors. Confirm by running:
 ```bash

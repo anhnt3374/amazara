@@ -417,8 +417,8 @@ backend/requirements.txt                # -r requirements-base.txt
 `requirements-ml.txt`:
 
 ```
-torch==2.5.1
-torchvision==0.20.1
+torch==2.6.0
+torchvision==0.21.0
 transformers==4.46.3
 sentence-transformers==3.3.1
 huggingface-hub==0.26.2
@@ -434,19 +434,23 @@ redis==5.2.0
 
 | Pair | Reason |
 |---|---|
-| `torch==2.5.1` + `torchvision==0.20.1` | Only stable minor pair with full Python 3.13 support. |
-| `transformers==4.46.3` | First version with Python 3.13 support and required for FG-CLIP 2 loader. |
-| `numpy==1.26.4` | Avoid numpy 2 ABI mix; transformers 4.46 + torch 2.5 are safest with 1.26. |
-| `sentence-transformers==3.3.1` | Compatible with transformers 4.46 and torch 2.5. |
+| `torch==2.6.0` + `torchvision==0.21.0` | Lowest pair shipping Python 3.13 wheels on `download.pytorch.org/whl/cpu` and `whl/cu124`. torch 2.5.1 / torchvision 0.20.1 (an earlier draft pin) have no cp313 wheels. |
+| `transformers==4.46.3` | Supports Python 3.13 and required for FG-CLIP 2 loader. Only requires `torch>=2.0`, so torch 2.6.0 is compatible. |
+| `numpy==1.26.4` | Avoid numpy 2 ABI mix; safest under transformers 4.46. |
+| `sentence-transformers==3.3.1` | Compatible with transformers 4.46 and torch 2.6. |
 | `pymilvus==2.4.9` | Matches Milvus server `v2.4.1` already pinned in docker-compose. |
-| `pillow==10.4.0` | Required by torchvision 0.20; avoids 11.x wheel issues on 3.13. |
+| `pillow==10.4.0` | Required by torchvision 0.21; avoids 11.x wheel issues on 3.13. |
 
 ### 10.3 GPU vs CPU wheel
 
+When pulling from `download.pytorch.org/whl/...`, the local-version suffix
+`+cpu` or `+cu124` is required because that index hosts wheels labeled with
+that suffix.
+
 - Production GPU (CUDA 12.4):
-  `pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu124`
+  `pip install --index-url https://download.pytorch.org/whl/cu124 torch==2.6.0+cu124 torchvision==0.21.0+cu124`
 - Dev CPU:
-  `pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu`
+  `pip install --index-url https://download.pytorch.org/whl/cpu torch==2.6.0+cpu torchvision==0.21.0+cpu`
 
 `requirements-ml.txt` does not pin an index URL; the install step (Dockerfile
 or local `make`) picks the appropriate one. Documented in
