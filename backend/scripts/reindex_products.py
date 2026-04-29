@@ -138,8 +138,8 @@ def parse_args() -> argparse.Namespace:
 
 async def amain(args: argparse.Namespace) -> int:
     image_coll, text_coll = vector_store.ensure_collections(drop=args.rebuild)
-    bge = BgeTextEmbedder.get()
-    fg = FgClipEmbedder.get()
+    bge = BgeTextEmbedder.get() if not args.skip_descriptions else None
+    fg = FgClipEmbedder.get() if not args.skip_images else None
 
     db = SessionLocal()
     try:

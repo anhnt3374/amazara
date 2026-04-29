@@ -540,6 +540,17 @@ Marked `@pytest.mark.integration` so light CI can skip.
 
 ## 13. Open issues / future work
 
+- **FG-CLIP 2 loader compatibility (active)**: `qihoo360/fg-clip2-base`'s
+  custom remote code references `transformers.modeling_layers` (introduced in
+  `transformers>=4.50`) and registers a `Fgclip2Config` that plain `AutoModel`
+  doesn't recognize even with `trust_remote_code=True`. Two paths to resolve:
+  (1) bump `transformers` past 4.50 AND switch the loader from `AutoModel` to
+  the model class the FG-CLIP 2 model card recommends (likely
+  `AutoModelForCausalLM` or a dedicated `Fgclip2Model.from_pretrained`); or
+  (2) pin to an FG-CLIP version whose remote code matches transformers 4.46.
+  Until resolved, the indexing pipeline runs in `--skip-images` mode (BGE
+  description path only) and the live query endpoint will 503 when it tries
+  to load FG-CLIP 2.
 - **Auto-incremental reindex** on Product CRUD (stage C): event hooks or
   background queue. Out of scope for v1.
 - **Image-as-query** mode: same image collection can serve it; need new
