@@ -7,6 +7,7 @@ from app.crud.favorite import (
     is_favorited as is_product_favorited,
 )
 from app.crud.product import get_similar_products, search_products
+from app.services.search.exceptions import SemanticSearchError
 from app.crud.review import get_review_aggregate
 from app.db.session import get_db
 from app.models.category import Category
@@ -47,14 +48,20 @@ def search(
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_current_user_optional),
 ):
-    result = search_products(
-        db,
-        search=search,
-        brand_ids=brand_ids,
-        category_ids=category_ids,
-        sort=sort,
-        page=page,
-    )
+    try:
+        result = search_products(
+            db,
+            search=search,
+            brand_ids=brand_ids,
+            category_ids=category_ids,
+            sort=sort,
+            page=page,
+        )
+    except SemanticSearchError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="semantic search temporarily unavailable",
+        ) from e
     favorited_ids = (
         get_user_favorite_product_ids(db, current_user.id) if current_user else set()
     )
