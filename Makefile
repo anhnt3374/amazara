@@ -64,11 +64,11 @@ check-ml-env:
 	cd backend && ../backend/venv/bin/python scripts/check_ml_env.py
 
 install-ml-cpu:
-	backend/venv/bin/pip install --index-url https://download.pytorch.org/whl/cpu torch==2.6.0+cpu torchvision==0.21.0+cpu
+	backend/venv/bin/pip install --index-url https://download.pytorch.org/whl/cpu torch==2.11.0+cpu torchvision==0.26.0+cpu
 	backend/venv/bin/pip install -r backend/requirements-ml.txt
 
 install-ml-gpu:
-	backend/venv/bin/pip install --index-url https://download.pytorch.org/whl/cu124 torch==2.6.0+cu124 torchvision==0.21.0+cu124
+	backend/venv/bin/pip install --index-url https://download.pytorch.org/whl/cu124 torch==2.11.0+cu124 torchvision==0.26.0+cu124
 	backend/venv/bin/pip install -r backend/requirements-ml.txt
 
 reindex:

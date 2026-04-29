@@ -17,7 +17,7 @@ tags: [milvus, embeddings, schema]
 | `category_id` | VARCHAR(36) nullable | indexed; used in filter expr |
 | `brand_id` | VARCHAR(36) nullable | indexed |
 | `image_idx` | INT8 | order within product |
-| `embedding` | FLOAT_VECTOR(512) | L2-normalized; metric IP |
+| `embedding` | FLOAT_VECTOR(768) | L2-normalized; metric IP |
 
 ### `product_desc_vec_v1` — one row per product
 

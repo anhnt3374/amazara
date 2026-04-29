@@ -38,7 +38,7 @@ class SemanticSearchTest(unittest.TestCase):
         bge.encode.return_value = np.zeros((1, 384), dtype=np.float32)
 
         fg = MagicMock()
-        fg.encode.return_value = np.zeros((1, 512), dtype=np.float32)
+        fg.encode.return_value = np.zeros((1, 768), dtype=np.float32)
 
         return [
             patch(
@@ -83,7 +83,7 @@ class SemanticSearchTest(unittest.TestCase):
         cache.store[key] = [("X", 1.0)]
 
         bge = MagicMock(); bge.encode.return_value = np.zeros((1, 384), dtype=np.float32)
-        fg = MagicMock();  fg.encode.return_value = np.zeros((1, 512), dtype=np.float32)
+        fg = MagicMock();  fg.encode.return_value = np.zeros((1, 768), dtype=np.float32)
         with patch("app.services.search.search_service._get_text_embedder", return_value=bge), \
              patch("app.services.search.search_service._get_image_text_embedder", return_value=fg), \
              patch("app.services.search.search_service._get_cache", return_value=cache), \

@@ -71,6 +71,22 @@ class ChatAssistantFlowTest(unittest.TestCase):
         self._set_bot_engine("stub")
         self.addCleanup(self._reset_bot_engine)
 
+        # Force the semantic-search path to fail in this isolated SQLite
+        # test, so the chat assistant exercises its lexical-empty fallback
+        # against the test DB rather than hitting a possibly-populated
+        # external Milvus instance.
+        from app.services.search.exceptions import VectorStoreUnavailable
+
+        async def _raise_unavailable(*_args, **_kwargs):
+            raise VectorStoreUnavailable("milvus disabled in unit test")
+
+        self._semantic_patch = patch(
+            "app.crud.product.semantic_search",
+            side_effect=_raise_unavailable,
+        )
+        self._semantic_patch.start()
+        self.addCleanup(self._semantic_patch.stop)
+
     def tearDown(self) -> None:
         self.session.close()
         Base.metadata.drop_all(bind=self.engine)

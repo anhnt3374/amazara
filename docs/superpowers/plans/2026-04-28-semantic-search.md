@@ -89,9 +89,9 @@ langsmith>=0.3,<1
 - [ ] **Step 2: Create `backend/requirements-ml.txt`**
 
 ```
-torch==2.6.0
-torchvision==0.21.0
-transformers==4.46.3
+torch==2.11.0
+torchvision==0.26.0
+transformers>=4.56,<5
 sentence-transformers==3.3.1
 huggingface-hub==0.26.2
 pillow==10.4.0
@@ -121,7 +121,7 @@ Run:
 ```bash
 backend/venv/bin/pip install --upgrade pip
 backend/venv/bin/pip install -r backend/requirements-base.txt
-backend/venv/bin/pip install --index-url https://download.pytorch.org/whl/cpu torch==2.6.0+cpu torchvision==0.21.0+cpu
+backend/venv/bin/pip install --index-url https://download.pytorch.org/whl/cpu torch==2.11.0+cpu torchvision==0.26.0+cpu
 backend/venv/bin/pip install -r backend/requirements-ml.txt
 ```
 
@@ -170,7 +170,7 @@ Append the following fields inside the `Settings` class, before the `DATABASE_UR
     SEMANTIC_FGCLIP_MODEL: str = "qihoo360/fg-clip2-base"
     SEMANTIC_TEXT_MODEL: str = "BAAI/bge-small-en-v1.5"
     SEMANTIC_DEVICE: Literal["auto", "cuda", "cpu"] = "auto"
-    SEMANTIC_FGCLIP_DIM: int = 512
+    SEMANTIC_FGCLIP_DIM: int = 768
     SEMANTIC_TEXT_DIM: int = 384
     SEMANTIC_HF_CACHE_DIR: str | None = None
 
@@ -1728,7 +1728,7 @@ class SemanticSearchTest(unittest.TestCase):
         bge.encode.return_value = np.zeros((1, 384), dtype=np.float32)
 
         fg = MagicMock()
-        fg.encode.return_value = np.zeros((1, 512), dtype=np.float32)
+        fg.encode.return_value = np.zeros((1, 768), dtype=np.float32)
 
         return [
             patch(
@@ -1777,7 +1777,7 @@ class SemanticSearchTest(unittest.TestCase):
         cache.store[key] = [("X", 1.0)]
 
         bge = MagicMock(); bge.encode.return_value = np.zeros((1, 384), dtype=np.float32)
-        fg = MagicMock();  fg.encode.return_value = np.zeros((1, 512), dtype=np.float32)
+        fg = MagicMock();  fg.encode.return_value = np.zeros((1, 768), dtype=np.float32)
         with patch("app.services.search.search_service._get_text_embedder", return_value=bge), \
              patch("app.services.search.search_service._get_image_text_embedder", return_value=fg), \
              patch("app.services.search.search_service._get_cache", return_value=cache), \
@@ -2568,7 +2568,7 @@ tags: [milvus, embeddings, schema]
 | `category_id` | VARCHAR(36) nullable | indexed; used in filter expr |
 | `brand_id` | VARCHAR(36) nullable | indexed |
 | `image_idx` | INT8 | order within product |
-| `embedding` | FLOAT_VECTOR(512) | L2-normalized; metric IP |
+| `embedding` | FLOAT_VECTOR(768) | L2-normalized; metric IP |
 
 ### `product_desc_vec_v1` — one row per product
 

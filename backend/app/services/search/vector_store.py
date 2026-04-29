@@ -141,10 +141,13 @@ def search_image(
     except Exception as e:  # noqa: BLE001
         raise VectorStoreUnavailable(f"image search failed: {e}") from e
 
-    out: list[tuple[str, str, float]] = []
-    for hit in results[0]:
-        out.append((hit.id, hit.entity.get("product_id"), float(hit.score)))
-    return out
+    # pymilvus 2.4.9 Hits is subscriptable but not iterable (no __iter__),
+    # so iterate by index.
+    hits = results[0]
+    return [
+        (hits[i].id, hits[i].entity.get("product_id"), float(hits[i].score))
+        for i in range(len(hits))
+    ]
 
 
 def search_text(
@@ -165,7 +168,8 @@ def search_text(
     except Exception as e:  # noqa: BLE001
         raise VectorStoreUnavailable(f"text search failed: {e}") from e
 
-    return [(hit.id, float(hit.score)) for hit in results[0]]
+    hits = results[0]
+    return [(hits[i].id, float(hits[i].score)) for i in range(len(hits))]
 
 
 def build_filter_expr(

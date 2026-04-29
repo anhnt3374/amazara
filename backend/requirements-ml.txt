@@ -1,6 +1,6 @@
-torch==2.6.0
-torchvision==0.21.0
-transformers==4.46.3
+torch==2.11.0
+torchvision==0.26.0
+transformers>=4.56,<5
 sentence-transformers==3.3.1
 huggingface-hub==0.26.2
 pillow==10.4.0

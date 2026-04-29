@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     SEMANTIC_FGCLIP_MODEL: str = "qihoo360/fg-clip2-base"
     SEMANTIC_TEXT_MODEL: str = "BAAI/bge-small-en-v1.5"
     SEMANTIC_DEVICE: Literal["auto", "cuda", "cpu"] = "auto"
-    SEMANTIC_FGCLIP_DIM: int = 512
+    SEMANTIC_FGCLIP_DIM: int = 768
     SEMANTIC_TEXT_DIM: int = 384
     SEMANTIC_HF_CACHE_DIR: str | None = None
 

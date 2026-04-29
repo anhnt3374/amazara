@@ -33,7 +33,7 @@ below the top score are dropped, and the result is paginated.
 
 | Role | Model | Dim | License | Notes |
 |---|---|---|---|---|
-| Image encoder + Text encoder for image-side query | `qihoo360/fg-clip2-base` | 512 | Apache 2.0 | ViT-B/16 backbone; joint image/text space. |
+| Image encoder + Text encoder for image-side query | `qihoo360/fg-clip2-base` | 768 | Apache 2.0 | ViT-B/16 backbone; joint image/text space. Loaded via `AutoModelForCausalLM` (model registers itself only there in `auto_map`); `get_text_features(walk_type="short")` is used for the query path. |
 | Text encoder for description-side query | `BAAI/bge-small-en-v1.5` | 384 | Apache 2.0 | 33M params, 512-token context, top-tier MTEB retrieval for its size. |
 
 Rationale: FG-CLIP 2's text encoder must be used on the image-side query so
@@ -109,7 +109,7 @@ Two collections, distinct because dimensions and cardinalities differ.
 | `category_id` | VARCHAR(36) nullable | scalar, indexed (filter) |
 | `brand_id` | VARCHAR(36) nullable | scalar, indexed (filter) |
 | `image_idx` | INT8 | 0..N-1 within product |
-| `embedding` | FLOAT_VECTOR(512) | L2-normalized; metric `IP` (cosine) |
+| `embedding` | FLOAT_VECTOR(768) | L2-normalized; metric `IP` (cosine) |
 
 Vector index: `IVF_FLAT`, `nlist=128`, `nprobe=16`.
 
@@ -224,7 +224,7 @@ the existing lexical-empty path (filter + sort + paginate).
     → milvus_filter_expr = "category_id in [...]"  (or None)
 
 [2] Encode query (parallel)
-    q_img = fgclip.encode_text(query)   # 512-dim, L2-norm
+    q_img = fgclip.encode_text(query)   # 768-dim, L2-norm
     q_txt = bge.encode_text(query)      # 384-dim, L2-norm
 
 [3] ANN search (parallel)
@@ -353,7 +353,7 @@ class Settings(BaseSettings):
     SEMANTIC_FGCLIP_MODEL: str = "qihoo360/fg-clip2-base"
     SEMANTIC_TEXT_MODEL: str = "BAAI/bge-small-en-v1.5"
     SEMANTIC_DEVICE: str = "auto"          # auto | cuda | cpu
-    SEMANTIC_FGCLIP_DIM: int = 512
+    SEMANTIC_FGCLIP_DIM: int = 768
     SEMANTIC_TEXT_DIM: int = 384
     SEMANTIC_HF_CACHE_DIR: str | None = None
 
@@ -417,9 +417,9 @@ backend/requirements.txt                # -r requirements-base.txt
 `requirements-ml.txt`:
 
 ```
-torch==2.6.0
-torchvision==0.21.0
-transformers==4.46.3
+torch==2.11.0
+torchvision==0.26.0
+transformers>=4.56,<5
 sentence-transformers==3.3.1
 huggingface-hub==0.26.2
 pillow==10.4.0
@@ -435,8 +435,8 @@ redis==5.2.0
 
 | Pair | Reason |
 |---|---|
-| `torch==2.6.0` + `torchvision==0.21.0` | Lowest pair shipping Python 3.13 wheels on `download.pytorch.org/whl/cpu` and `whl/cu124`. torch 2.5.1 / torchvision 0.20.1 (an earlier draft pin) have no cp313 wheels. |
-| `transformers==4.46.3` | Supports Python 3.13 and required for FG-CLIP 2 loader. Only requires `torch>=2.0`, so torch 2.6.0 is compatible. |
+| `torch==2.11.0` + `torchvision==0.26.0` | Required by FG-CLIP 2's remote code (uses `transformers.modeling_layers`, available only in transformers ≥4.50, which in turn pairs with torch ≥2.7+). torch 2.11.0 / torchvision 0.26.0 are the latest stable cp313 wheels on `download.pytorch.org/whl/cpu` and `whl/cu124` as of April 2026. |
+| `transformers>=4.56,<5` | FG-CLIP 2 needs `transformers.modeling_layers` (introduced 4.50+) and registers `Fgclip2Config` under `auto_map.AutoModelForCausalLM`. Range pinned to 4.56+ to silence deprecation warnings, capped under 5.x to avoid future API breakage. |
 | `numpy==1.26.4` | Avoid numpy 2 ABI mix; safest under transformers 4.46. |
 | `sentence-transformers==3.3.1` | Compatible with transformers 4.46 and torch 2.6. |
 | `pymilvus==2.4.9` | Matches Milvus server `v2.4.1` already pinned in docker-compose. |
@@ -450,9 +450,9 @@ When pulling from `download.pytorch.org/whl/...`, the local-version suffix
 that suffix.
 
 - Production GPU (CUDA 12.4):
-  `pip install --index-url https://download.pytorch.org/whl/cu124 torch==2.6.0+cu124 torchvision==0.21.0+cu124`
+  `pip install --index-url https://download.pytorch.org/whl/cu124 torch==2.11.0+cu124 torchvision==0.26.0+cu124`
 - Dev CPU:
-  `pip install --index-url https://download.pytorch.org/whl/cpu torch==2.6.0+cpu torchvision==0.21.0+cpu`
+  `pip install --index-url https://download.pytorch.org/whl/cpu torch==2.11.0+cpu torchvision==0.26.0+cpu`
 
 `requirements-ml.txt` does not pin an index URL; the install step (Dockerfile
 or local `make`) picks the appropriate one. Documented in
@@ -540,17 +540,6 @@ Marked `@pytest.mark.integration` so light CI can skip.
 
 ## 13. Open issues / future work
 
-- **FG-CLIP 2 loader compatibility (active)**: `qihoo360/fg-clip2-base`'s
-  custom remote code references `transformers.modeling_layers` (introduced in
-  `transformers>=4.50`) and registers a `Fgclip2Config` that plain `AutoModel`
-  doesn't recognize even with `trust_remote_code=True`. Two paths to resolve:
-  (1) bump `transformers` past 4.50 AND switch the loader from `AutoModel` to
-  the model class the FG-CLIP 2 model card recommends (likely
-  `AutoModelForCausalLM` or a dedicated `Fgclip2Model.from_pretrained`); or
-  (2) pin to an FG-CLIP version whose remote code matches transformers 4.46.
-  Until resolved, the indexing pipeline runs in `--skip-images` mode (BGE
-  description path only) and the live query endpoint will 503 when it tries
-  to load FG-CLIP 2.
 - **Auto-incremental reindex** on Product CRUD (stage C): event hooks or
   background queue. Out of scope for v1.
 - **Image-as-query** mode: same image collection can serve it; need new

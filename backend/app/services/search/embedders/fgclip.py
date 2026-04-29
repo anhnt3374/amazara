@@ -6,7 +6,7 @@ import threading
 import numpy as np
 import torch
 from PIL.Image import Image
-from transformers import AutoModel, AutoProcessor
+from transformers import AutoModelForCausalLM, AutoProcessor
 
 from app.core.config import settings
 from app.services.search.embedders.base import ImageEmbedder, TextEmbedder
@@ -41,7 +41,10 @@ class FgClipEmbedder(ImageEmbedder, TextEmbedder):
                 trust_remote_code=True,
                 cache_dir=settings.SEMANTIC_HF_CACHE_DIR,
             )
-            self._model = AutoModel.from_pretrained(
+            # FG-CLIP 2 registers itself only under AutoModelForCausalLM
+            # (see config.json `auto_map`), so we must use that loader even
+            # though the model is a CLIP-style dual encoder, not a causal LM.
+            self._model = AutoModelForCausalLM.from_pretrained(
                 settings.SEMANTIC_FGCLIP_MODEL,
                 trust_remote_code=True,
                 cache_dir=settings.SEMANTIC_HF_CACHE_DIR,
@@ -78,7 +81,9 @@ class FgClipEmbedder(ImageEmbedder, TextEmbedder):
             inputs = self._processor(
                 text=texts, return_tensors="pt", padding=True, truncation=True
             ).to(self._device)
-            feats = self._model.get_text_features(**inputs)
+            # walk_type="short" matches the query path (search bar input);
+            # "long" is for description-length captions and is not used here.
+            feats = self._model.get_text_features(**inputs, walk_type="short")
             feats = _l2_normalize(feats)
         except Exception as e:  # noqa: BLE001
             raise EmbedderUnavailable(f"FG-CLIP 2 text encode failed: {e}") from e
