@@ -1,139 +1,345 @@
 ---
 doc_type: setup
-tags: [install, env, docker, quickstart, makefile]
+tags: [install, env, docker, quickstart, makefile, ml, semantic-search, embedding, reindex]
 ---
 
 # Project Setup
 
-## Requirements
+End-to-end guide: clone → install → seed mock data → build vector index →
+run backend + frontend → verify. Follow top-to-bottom for a fresh machine.
 
-| Tool | Minimum version |
-|---|---|
-| Docker + Docker Compose | 24.x |
-| Python | 3.11+ |
-| Node.js | 20+ |
+## 1. Requirements
 
-## Quick Start
+| Tool | Required version | Why |
+|---|---|---|
+| Docker + Docker Compose | 24.x+ | MySQL, Milvus, Redis, etcd, MinIO containers |
+| Python | **3.13** (3.13.12 tested) | Production runtime; pyenv recommended |
+| Node.js | 20+ | Vite frontend |
+| Disk | ~6 GB free | torch + FG-CLIP 2 weights + Milvus data |
+| RAM | 8 GB+ | Milvus uses ~2 GB; embedders share rest |
+
+GPU is optional. Everything below works on CPU; ML index build is just slower.
+
+## 2. Clone + Python venv
 
 ```bash
-cp .env.example backend/.env   # 1. Configure env
-make docker-up                 # 2. Start MySQL + Milvus
-make venv                      # 3a. Create Python venv
-make install-backend           # 3b. Install Python packages
-make migrate                   # 4. Create DB tables
-make run-backend               # 5. Start API server (:8000)
-# In another terminal:
-make install-frontend          # 6. Install Node packages
-make run-frontend              # 7. Start Vite dev server (:5173)
+git clone <repo-url> shope
+cd shope
+
+# Create Python 3.13 venv (do NOT use system `python` — may default to 3.12)
+/home/<you>/.pyenv/versions/3.13.12/bin/python -m venv backend/venv
+# Or, on systems with `python3.13` on PATH:
+# python3.13 -m venv backend/venv
+
+# Verify
+backend/venv/bin/python --version    # → Python 3.13.12
 ```
 
-## Environment Variables
+## 3. Configure environment
 
-Copy and edit:
 ```bash
 cp .env.example backend/.env
 ```
 
-Key variables in `backend/.env`:
-```env
-MYSQL_PASSWORD=shope_password
-SECRET_KEY=<strong random string>
-BOT_ENGINE=groq
-GROQ_API_KEY=<your groq api key>
-```
+Edit `backend/.env`. Required values:
 
-Generate a secure `SECRET_KEY`:
-```bash
-python -c "import secrets; print(secrets.token_hex(32))"
-```
+| Key | Example | Note |
+|---|---|---|
+| `MYSQL_PASSWORD` | `shope_password` | Match docker-compose default or override |
+| `SECRET_KEY` | `<random>` | Generate: `python -c "import secrets; print(secrets.token_hex(32))"` |
+| `GROQ_API_KEY` | `gsk_...` | Required only if `BOT_ENGINE=groq` |
 
-`backend/.env` is loaded by `backend/app/core/config.py` via Pydantic `Settings`.
+Semantic-search defaults are already in `.env.example` and rarely need
+changes. The most useful tuning knobs:
 
-## All Makefile Commands
+| Key | Default | Effect |
+|---|---|---|
+| `SEMANTIC_FUSION_ALPHA` | `0.5` | Weight of image side in score fusion (text = 1−α) |
+| `SEMANTIC_OUTLIER_RATIO_TAU` | `0.6` | Drop items below `τ × top1` |
+| `SEMANTIC_IMAGE_AGG_TOP_K` | `3` | Mean of K best images per product |
+| `SEMANTIC_DEVICE` | `auto` | `auto` / `cuda` / `cpu` |
+| `SEMANTIC_CACHE_BACKEND` | `memory` | `memory` (dev) or `redis` (multi-worker) |
 
-```bash
-make venv                       # Create backend/venv
-make install-backend            # pip install -r backend/requirements.txt into venv
-make makemigrations msg=<name>  # Generate Alembic migration file
-make migrate                    # Apply pending migrations (alembic upgrade head)
-make run-backend                # uvicorn on :8000 with --reload
-make install-frontend           # npm install in frontend/
-make run-frontend               # Vite dev server on :5173
-make docker-up                  # Start MySQL + Milvus
-make docker-down                # Stop Docker services
-make seed                       # Reset schema + validate + re-run all seeds
-```
+## 4. Install dependencies
 
-Backend commands execute via `backend/venv/bin/` — never assume a globally activated venv.
-
-## Seed Mock Data
-
-The full pipeline runs via:
+### 4a. Backend base packages
 
 ```bash
+backend/venv/bin/pip install --upgrade pip
+backend/venv/bin/pip install -r backend/requirements-base.txt
+```
+
+### 4b. ML stack (torch + transformers + pymilvus + redis client)
+
+Pick **one** based on hardware:
+
+```bash
+# CPU-only (dev machine without NVIDIA GPU)
+make install-ml-cpu
+
+# CUDA 12.4 (production GPU)
+make install-ml-gpu
+```
+
+These targets pull `torch==2.11.0+{cpu,cu124}` and
+`torchvision==0.26.0+{cpu,cu124}` from `download.pytorch.org`, then install
+the rest of `backend/requirements-ml.txt` (transformers, sentence-transformers,
+pymilvus, redis, etc.).
+
+> **Why those pins:** FG-CLIP 2 (`qihoo360/fg-clip2-base`) needs
+> `transformers ≥ 4.50` (uses `transformers.modeling_layers`), which in
+> turn pairs with torch ≥ 2.7. torch 2.11.0 + torchvision 0.26.0 are the
+> latest stable cp313 wheels. `transformers` is pinned `>=4.56,<5`.
+> Don't substitute the CPU/GPU index — PyPI's default torch wheels are
+> CUDA-flavored and large.
+
+### 4c. Frontend packages
+
+```bash
+make install-frontend
+```
+
+### 4d. ML stack smoke test
+
+```bash
+make check-ml-env
+```
+
+Expected: prints torch/transformers/pymilvus versions, then `OK` after
+loading BGE and running one forward pass. First run downloads BGE
+weights (~130 MB) into `~/.cache/huggingface`.
+
+## 5. Boot Docker services
+
+```bash
+make docker-up
+```
+
+Brings up five containers: MySQL 8.0, Milvus 2.4.1 (with etcd + MinIO),
+and Redis 7. Wait until they report healthy:
+
+```bash
+docker ps --format "table {{.Names}}\t{{.Status}}"
+```
+
+Expected output (after ~15 s):
+
+```
+NAMES          STATUS
+shope_mysql    Up (healthy)
+shope_milvus   Up
+shope_redis    Up (healthy)
+shope_etcd     Up
+shope_minio    Up (healthy)
+```
+
+## 6. Database migrations + seed data
+
+```bash
+# Apply Alembic migrations to create the 9 MySQL tables
+make migrate
+
+# Reset schema + run every seed script in dependency order
 make seed
 ```
 
-That wrapper calls `mock/seed_all.sh`, which (a) resets the schema with
-`alembic downgrade base && alembic upgrade head`, (b) validates product
-image URLs, and (c) runs every seed script in dependency order. Order
-seeding is intentionally skipped until the order UI ships.
+`make seed` calls `mock/seed_all.sh`, which:
 
-### Individual scripts
+1. `alembic downgrade base && alembic upgrade head` — clean schema
+2. Validates 1000+ product image URLs (cached in `mock/url_check_cache.json`)
+3. Seeds 100 users, addresses, 20 stores, products, reviews, carts, favorites
 
-Run in order (each requires predecessors). Every script also exports its
-rows to a CSV under `mock/` for reuse:
+Run individual scripts if you need partial reseeding:
 
 ```bash
-backend/venv/bin/python mock/validate_products.py  # products.json → products_clean.json (HEAD-checks image URLs)
-backend/venv/bin/python mock/seed_users.py         # 100 users → mock/users.csv
-backend/venv/bin/python mock/seed_addresses.py     # 1–5 addresses/user → mock/addresses.csv
-backend/venv/bin/python mock/seed_stores.py        # 20 stores → mock/stores.csv
-backend/venv/bin/python mock/seed_products.py      # products (from products_clean.json) → mock/products.csv
-backend/venv/bin/python mock/seed_reviews.py       # 50–100 reviews/product → mock/reviews.csv
-backend/venv/bin/python mock/seed_cart_items.py    # 0–99 cart items/user → mock/cart_items.csv
-backend/venv/bin/python mock/seed_favorites.py     # 0–40 favorites/user → mock/favorites.csv
+backend/venv/bin/python mock/validate_products.py
+backend/venv/bin/python mock/seed_users.py
+backend/venv/bin/python mock/seed_addresses.py
+backend/venv/bin/python mock/seed_stores.py
+backend/venv/bin/python mock/seed_products.py
+backend/venv/bin/python mock/seed_reviews.py
+backend/venv/bin/python mock/seed_cart_items.py
+backend/venv/bin/python mock/seed_favorites.py
 ```
 
-`validate_products.py` caches its per-URL results in `mock/url_check_cache.json`
-so re-runs are fast. Delete that file to force a full re-check.
+Each script writes a CSV under `mock/` for reuse and is idempotent given
+the same inputs.
 
-## Smoke Test
+## 7. Build the semantic-search vector index
 
-After the backend, frontend, and Docker services are running, you can run the
-local smoke test script to verify the main system flows without keeping the
-generated smoke data:
+```bash
+make reindex
+```
+
+This calls `backend/scripts/reindex_products.py` which:
+
+1. Loads every Product row from MySQL.
+2. Splits image URLs (pipe-separated `|`), keeps the first
+   `SEMANTIC_MAX_IMAGES_PER_PRODUCT` (default 4) per product.
+3. Concurrently fetches images via aiohttp.
+4. Embeds descriptions with **BGE-small-en-v1.5** (384-dim) and images with
+   **FG-CLIP 2** (`qihoo360/fg-clip2-base`, 768-dim).
+5. Upserts into two Milvus collections:
+   - `product_image_vec_v1` — one row per image
+   - `product_desc_vec_v1` — one row per product description
+6. Clears the search cache.
+
+First run downloads model weights (~600 MB FG-CLIP 2 + ~130 MB BGE) and
+takes a long time on CPU (~minutes per 100 products). Subsequent runs
+are faster (cached weights, can use `--product-ids` for partial updates).
+
+### Common reindex flags
+
+```bash
+# Rebuild from scratch (drop + recreate Milvus collections)
+backend/venv/bin/python backend/scripts/reindex_products.py --rebuild
+
+# Reindex a subset only
+backend/venv/bin/python backend/scripts/reindex_products.py \
+    --product-ids "id1,id2,id3"
+
+# Skip a modality for faster iteration
+backend/venv/bin/python backend/scripts/reindex_products.py --skip-images
+backend/venv/bin/python backend/scripts/reindex_products.py --skip-descriptions
+
+# Tune batch sizes
+backend/venv/bin/python backend/scripts/reindex_products.py \
+    --batch-size-products 32 --image-batch-size 16
+```
+
+The script logs progress every 100 products. Image fetch failures are
+logged and skipped — products without any successful image still get
+indexed with a description-only embedding.
+
+## 8. Run the application
+
+```bash
+# Terminal 1 — FastAPI
+make run-backend       # http://localhost:8000
+
+# Terminal 2 — Vite
+make run-frontend      # http://localhost:5173
+```
+
+The frontend dev server proxies API calls to `:8000`.
+
+## 9. Verify end to end
+
+### Backend health
+
+```bash
+curl http://localhost:8000/health
+# {"status":"ok"}
+```
+
+### Semantic search
+
+```bash
+curl 'http://localhost:8000/products/search?search=running+shoes&page=1' | head -c 600
+```
+
+Expected: JSON `ProductSearchResponse` with `products` ranked by relevance,
+`total > 0`, and `available_brands` / `available_categories` reflecting the
+candidate set after outlier cut. The second identical call should return
+in <50 ms (cache hit).
+
+### Lexical-only fallback (no query)
+
+```bash
+curl 'http://localhost:8000/products/search?page=1' | head -c 600
+```
+
+This skips Milvus entirely and returns the first page of all products.
+
+### Smoke test (full system)
 
 ```bash
 backend/venv/bin/python backend/scripts/smoke_test.py
 ```
 
-Current smoke coverage includes:
-
-- backend health
-- frontend route serving for the main routes
-- user auth (`register`, `login`, `me`)
-- product search and product detail
-- addresses, favorites, cart, and orders
-- user system chat over REST and WebSocket
-- store auth and buyer-store chat
-
-The script creates temporary `smoke.*` user/store data, prints a JSON
-`PASS` / `FAIL` / `BLOCKED` report, and then cleans up the generated smoke
-records automatically.
-
-Useful variants:
+Covers backend health, frontend routes, auth, product search, addresses,
+favorites, cart, orders, REST + WebSocket chat. Prints
+`PASS` / `FAIL` / `BLOCKED` per check and cleans up its own
+`smoke.*` test data.
 
 ```bash
 backend/venv/bin/python backend/scripts/smoke_test.py --keep-data
 backend/venv/bin/python backend/scripts/smoke_test.py --cleanup-only
 ```
 
-## Stop Docker
+## 10. Common operations
+
+### Re-tune ranking without reindexing
+
+Change any `SEMANTIC_*` query/cache parameter in `backend/.env` and
+restart the backend. No reindex needed for: `SEMANTIC_FUSION_ALPHA`,
+`SEMANTIC_OUTLIER_RATIO_TAU`, `SEMANTIC_IMAGE_AGG_TOP_K`,
+`SEMANTIC_ANN_TOPN_*`, `SEMANTIC_CACHE_*`.
+
+### Switch cache to Redis
 
 ```bash
-docker compose -f infra/docker-compose.yml down
-
-# Stop and remove all volumes (deletes data):
-docker compose -f infra/docker-compose.yml down -v
+# In backend/.env
+SEMANTIC_CACHE_BACKEND=redis
+REDIS_URL=redis://localhost:6379/0
 ```
+
+Restart backend. Redis is already in docker-compose.
+
+### Swap models or change collection schema
+
+Bump the collection name to `_v2` in `.env` and run `make reindex --rebuild`
+in the new namespace. When ready, swap `SEMANTIC_COLLECTION_*` settings
+and restart the backend (zero-downtime cutover).
+
+### Stop services
+
+```bash
+make docker-down                # Stop containers, keep volumes
+docker compose -f infra/docker-compose.yml down -v   # Also drop all data
+```
+
+## 11. Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `python -m venv` makes 3.12 venv | pyenv shim points at 3.12 | Use full path `~/.pyenv/versions/3.13.12/bin/python` |
+| `pip install torch==2.11.0+cpu` cannot find version | Wrong index URL | Ensure `--index-url https://download.pytorch.org/whl/cpu` |
+| `pymilvus` import fails with `marshmallow.__version_info__` | marshmallow 4.x | `requirements-ml.txt` pins `marshmallow==3.21.3`; reinstall |
+| `Unrecognized configuration class Fgclip2Config for AutoModel` | Used `AutoModel` instead of `AutoModelForCausalLM` | Already fixed in `embedders/fgclip.py` — pull latest |
+| `'SequenceIterator' object is not iterable` from Milvus search | pymilvus 2.4.9 quirk | Already fixed in `vector_store.py` — use latest |
+| `EmbedderUnavailable: FG-CLIP 2 load failed` | Wrong transformers version | `make install-ml-cpu` again to pull `transformers>=4.56` |
+| Endpoint returns 503 "semantic search temporarily unavailable" | Milvus down or weights missing | `make docker-up`; check logs in backend; first call downloads weights |
+| `make reindex` slow on first run | Downloading weights + CPU embedding | Expected; subsequent runs hit cache |
+
+## All Makefile commands
+
+```
+Backend
+  make venv                  Create virtual environment at backend/venv
+  make install-backend       Install Python packages from requirements.txt
+  make makemigrations msg=x  Generate Alembic migration file from models
+  make migrate               Apply pending migrations to the database
+  make run-backend           Run FastAPI dev server (port 8000)
+
+Semantic Search
+  make install-ml-cpu        Install PyTorch (CPU) and ML deps
+  make install-ml-gpu        Install PyTorch (CUDA 12.4) and ML deps
+  make check-ml-env          Smoke-test ML stack (loads BGE encoder)
+  make reindex               Rebuild Milvus collections from MySQL products
+
+Frontend
+  make install-frontend      Install Node packages (npm install)
+  make run-frontend          Run Vite dev server (port 5173)
+
+Docker
+  make docker-up             Start MySQL + Milvus + Redis
+  make docker-down           Stop Docker services
+  make docker-logs           View Docker service logs
+
+Data
+  make seed                  Reset schema + validate + re-run all seeds
+```
+
+Backend commands execute via `backend/venv/bin/` — never assume a globally
+activated venv.
