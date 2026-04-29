@@ -10,6 +10,7 @@ from app.crud.review import get_review_aggregate
 from app.models.user import User
 from app.schemas.order import OrderCreate, OrderItemCreate
 from app.services.chat.assistant_types import AssistantExecutionResult
+from app.services.search.exceptions import SemanticSearchError
 
 SHIPPING_FEE_VND = 63800
 
@@ -19,7 +20,11 @@ def _effective_price(price: int, discount: int) -> int:
 
 
 def execute_search(db: Session, query: str) -> AssistantExecutionResult:
-    result = search_products(db, search=query, page=1)
+    try:
+        result = search_products(db, search=query, page=1)
+    except SemanticSearchError:
+        # Semantic index unavailable; fall back to unfiltered lexical results.
+        result = search_products(db, search=None, page=1)
     items: list[dict[str, Any]] = []
     for product in result["products"]:
         items.append(

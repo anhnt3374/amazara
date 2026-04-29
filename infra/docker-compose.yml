@@ -81,6 +81,21 @@ services:
       - etcd
       - minio
 
+  # ─────────────────────────────────────────
+  # Redis (semantic search cache)
+  # ─────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: shope_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
 volumes:
   mysql_data:
   etcd_data:

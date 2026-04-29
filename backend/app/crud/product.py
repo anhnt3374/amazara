@@ -1,3 +1,5 @@
+import asyncio
+import concurrent.futures
 import math
 import random
 
@@ -7,6 +9,7 @@ from app.models.brand import Brand
 from app.models.category import Category
 from app.models.product import Product
 from app.schemas.product import ProductCreate, ProductUpdate
+from app.services.search.search_service import semantic_search
 
 
 def create_product(db: Session, data: ProductCreate) -> Product:
@@ -60,11 +63,99 @@ PAGE_SIZE = 20
 MAX_TOTAL = 500
 
 
-def _apply_search(query, search: str | None):
-    if search:
-        term = search.replace("%", "\\%").replace("_", "\\_")
-        query = query.filter(Product.description.ilike(f"%{term}%"))
-    return query
+def _post_sort_key(sort: str):
+    if sort == "newest":
+        return lambda p: p.created_at, True
+    if sort == "price-high-low":
+        return lambda p: p.price, True
+    if sort == "price-low-high":
+        return lambda p: p.price, False
+    if sort == "discount-rate":
+        return lambda p: p.discount, True
+    return None
+
+
+def _resolve_filter_ids(
+    db: Session,
+    *,
+    brand_ids: list[str] | None,
+    category_ids: list[str] | None,
+) -> tuple[list[str] | None, list[str] | None]:
+    """Resolve brand_ids → category_id list, intersecting with category_ids."""
+    final_cats = category_ids
+    if brand_ids:
+        rows = (
+            db.query(Category.id)
+            .filter(Category.brand_id.in_(brand_ids))
+            .all()
+        )
+        cat_from_brand = [r[0] for r in rows]
+        final_cats = (
+            list(set(final_cats) & set(cat_from_brand)) if final_cats else cat_from_brand
+        )
+    return final_cats, None  # brand filter applied via category_ids
+
+
+def _facet_brands(db: Session, category_ids: list[str] | None):
+    q = db.query(Category.brand_id).distinct()
+    if category_ids:
+        q = q.filter(Category.id.in_(category_ids))
+    brand_ids_present = [r[0] for r in q.all() if r[0] is not None]
+    if not brand_ids_present:
+        return []
+    return db.query(Brand).filter(Brand.id.in_(brand_ids_present)).all()
+
+
+def _facet_categories(db: Session, brand_ids: list[str] | None):
+    q = db.query(Category)
+    if brand_ids:
+        q = q.filter(Category.brand_id.in_(brand_ids))
+    return q.all()
+
+
+def _lexical_search(
+    db: Session,
+    *,
+    brand_ids: list[str] | None,
+    category_ids: list[str] | None,
+    sort: str,
+    page: int,
+) -> dict:
+    """No-query path: kept identical to the previous behavior."""
+    base = db.query(Product)
+    if category_ids:
+        base = base.filter(Product.category_id.in_(category_ids))
+    if brand_ids:
+        base = base.join(Category, Product.category_id == Category.id).filter(
+            Category.brand_id.in_(brand_ids)
+        )
+
+    total = min(base.count(), MAX_TOTAL)
+
+    if sort == "newest":
+        base = base.order_by(Product.created_at.desc())
+    elif sort == "price-high-low":
+        base = base.order_by(Product.price.desc())
+    elif sort == "price-low-high":
+        base = base.order_by(Product.price.asc())
+    elif sort == "discount-rate":
+        base = base.order_by(Product.discount.desc())
+
+    max_page = max(math.ceil(total / PAGE_SIZE), 1)
+    page = min(page, max_page)
+    products = base.offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).all()
+
+    available_brands = _facet_brands(db, category_ids)
+    available_categories = _facet_categories(db, brand_ids)
+
+    return {
+        "products": products,
+        "total": total,
+        "page": page,
+        "page_size": PAGE_SIZE,
+        "available_brands": available_brands,
+        "available_categories": available_categories,
+    }
 
 
 def search_products(
@@ -75,75 +166,85 @@ def search_products(
     sort: str = "best-sellers",
     page: int = 1,
 ) -> dict:
-    # --- base query with all filters ---
-    base = db.query(Product)
-    base = _apply_search(base, search)
-
-    if category_ids:
-        base = base.filter(Product.category_id.in_(category_ids))
-    if brand_ids:
-        base = base.join(Category, Product.category_id == Category.id).filter(
-            Category.brand_id.in_(brand_ids)
+    if not search or not search.strip():
+        return _lexical_search(
+            db,
+            brand_ids=brand_ids,
+            category_ids=category_ids,
+            sort=sort,
+            page=page,
         )
 
-    # --- total (capped at 500) ---
-    total = min(base.count(), MAX_TOTAL)
+    resolved_cats, _ = _resolve_filter_ids(
+        db, brand_ids=brand_ids, category_ids=category_ids
+    )
 
-    # --- sort ---
-    if sort == "newest":
-        base = base.order_by(Product.created_at.desc())
-    elif sort == "price-high-low":
-        base = base.order_by(Product.price.desc())
-    elif sort == "price-low-high":
-        base = base.order_by(Product.price.asc())
-    elif sort == "discount-rate":
-        base = base.order_by(Product.discount.desc())
+    coro = semantic_search(
+        search,
+        brand_ids=None,            # already merged into resolved_cats
+        category_ids=resolved_cats,
+    )
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
 
-    # --- paginate ---
+    if loop is not None:
+        # Called from within an async context (e.g. chat service).
+        # Run the coroutine in a fresh thread with its own event loop.
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            ranked = pool.submit(asyncio.run, coro).result()
+    else:
+        ranked = asyncio.run(coro)
+
+    if not ranked:
+        return {
+            "products": [],
+            "total": 0,
+            "page": 1,
+            "page_size": PAGE_SIZE,
+            "available_brands": [],
+            "available_categories": [],
+        }
+
+    # Hydrate Product rows in ranked order.
+    ranked_ids = [pid for pid, _ in ranked]
+    rows = db.query(Product).filter(Product.id.in_(ranked_ids)).all()
+    by_id = {p.id: p for p in rows}
+    ordered: list[Product] = [by_id[pid] for pid in ranked_ids if pid in by_id]
+
+    # Post-rank sort if user requested anything other than relevance.
+    sort_spec = _post_sort_key(sort)
+    if sort_spec is not None:
+        key, reverse = sort_spec
+        ordered = sorted(ordered, key=key, reverse=reverse)
+
+    total = len(ordered)
     max_page = max(math.ceil(total / PAGE_SIZE), 1)
     page = min(page, max_page)
-    products = base.offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).all()
+    page_products = ordered[(page - 1) * PAGE_SIZE : page * PAGE_SIZE]
 
-    # --- available brands (filtered by search + category_ids, NOT brand_ids) ---
-    brand_base = db.query(Product.category_id).distinct()
-    brand_base = _apply_search(brand_base, search)
-    if category_ids:
-        brand_base = brand_base.filter(Product.category_id.in_(category_ids))
-
-    cat_ids_for_brands = [r[0] for r in brand_base.all() if r[0] is not None]
-    if cat_ids_for_brands:
-        brand_id_rows = (
-            db.query(Category.brand_id)
-            .filter(Category.id.in_(cat_ids_for_brands))
-            .distinct()
-            .all()
-        )
-        available_brand_ids = [r[0] for r in brand_id_rows if r[0] is not None]
-        available_brands = (
-            db.query(Brand).filter(Brand.id.in_(available_brand_ids)).all()
-            if available_brand_ids
-            else []
-        )
-    else:
-        available_brands = []
-
-    # --- available categories (filtered by search + brand_ids, NOT category_ids) ---
-    cat_base = db.query(Product.category_id).distinct()
-    cat_base = _apply_search(cat_base, search)
-    if brand_ids:
-        cat_base = cat_base.join(Category, Product.category_id == Category.id).filter(
-            Category.brand_id.in_(brand_ids)
-        )
-
-    cat_id_rows = [r[0] for r in cat_base.all() if r[0] is not None]
+    # Facets from the candidate set.
+    cand_cats = {p.category_id for p in ordered if p.category_id}
+    cand_brands_q = (
+        db.query(Category.brand_id)
+        .filter(Category.id.in_(cand_cats))
+        .distinct()
+    )
+    cand_brand_ids = [r[0] for r in cand_brands_q.all() if r[0] is not None]
+    available_brands = (
+        db.query(Brand).filter(Brand.id.in_(cand_brand_ids)).all()
+        if cand_brand_ids
+        else []
+    )
     available_categories = (
-        db.query(Category).filter(Category.id.in_(cat_id_rows)).all()
-        if cat_id_rows
+        db.query(Category).filter(Category.id.in_(cand_cats)).all()
+        if cand_cats
         else []
     )
 
     return {
-        "products": products,
+        "products": page_products,
         "total": total,
         "page": page,
         "page_size": PAGE_SIZE,
