@@ -3,7 +3,7 @@
         makemigrations migrate \
         run-backend run-frontend \
         docker-up docker-down docker-logs \
-        check-ml-env install-ml-cpu install-ml-gpu \
+        check-ml-env install-ml-cpu install-ml-gpu reindex \
         seed
 
 help:
@@ -70,6 +70,9 @@ install-ml-cpu:
 install-ml-gpu:
 	backend/venv/bin/pip install --index-url https://download.pytorch.org/whl/cu124 torch==2.6.0+cu124 torchvision==0.21.0+cu124
 	backend/venv/bin/pip install -r backend/requirements-ml.txt
+
+reindex:
+	cd backend && ../backend/venv/bin/python scripts/reindex_products.py
 
 # ── Docker ────────────────────────────────────────────────────────────────────
 
