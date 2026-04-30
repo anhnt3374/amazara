@@ -50,10 +50,9 @@ class Settings(BaseSettings):
     SEMANTIC_IMAGE_FETCH_RETRIES: int = 2
     SEMANTIC_IMAGE_FETCH_CONCURRENCY: int = 16
 
-    # ── Semantic search: Weaviate ──────────────────────────────────────────
-    WEAVIATE_HOST: str = "localhost"
-    WEAVIATE_HTTP_PORT: int = 8080
-    WEAVIATE_GRPC_PORT: int = 50051
+    # ── Semantic search: Weaviate Cloud ────────────────────────────────────
+    WEAVIATE_URL: str = Field()
+    WEAVIATE_API_KEY: str = Field()
     SEMANTIC_COLLECTION_IMAGE: str = "ProductImageVecV1"
     SEMANTIC_COLLECTION_TEXT: str = "ProductDescVecV1"
 
@@ -64,11 +63,11 @@ class Settings(BaseSettings):
     SEMANTIC_FUSION_ALPHA: float = 0.5
     SEMANTIC_OUTLIER_RATIO_TAU: float = 0.6
 
-    # ── Semantic search: cache ─────────────────────────────────────────────
-    SEMANTIC_CACHE_BACKEND: Literal["memory", "redis"] = "memory"
+    # ── Semantic search: cache (Redis Cloud) ───────────────────────────────
+    SEMANTIC_CACHE_BACKEND: Literal["memory", "redis"] = "redis"
     SEMANTIC_CACHE_TTL_SEC: int = 600
     SEMANTIC_CACHE_MAX_ENTRIES: int = 1024
-    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_URL: str = Field()
 
     @field_validator("SEMANTIC_FUSION_ALPHA", "SEMANTIC_OUTLIER_RATIO_TAU")
     @classmethod
@@ -82,6 +81,7 @@ class Settings(BaseSettings):
         return (
             f"postgresql+psycopg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DATABASE}"
+            f"?sslmode=require"
         )
 
 

@@ -33,6 +33,10 @@ tags: [weaviate, embeddings, schema]
 Vector index: HNSW (Weaviate default). Filter strategy: `ACORN` (default
 since Weaviate v1.34) — pre-filtered ANN with inverted-index allow-list.
 
+Hosting: **Weaviate Cloud** (managed) — `connect_to_weaviate_cloud()`
+with API-key auth. The `WEAVIATE_URL` env var holds the REST endpoint
+(no `https://` prefix); gRPC is derived automatically by the client.
+
 ## Module boundaries
 
 - `embedders/*` — model + tensor → vector. No DB, no vector store.

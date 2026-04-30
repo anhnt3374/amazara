@@ -14,13 +14,13 @@ All commands run from the **project root** via Makefile:
 make venv                       # Create backend/venv
 make install-backend            # pip install into venv
 make makemigrations msg=<name>  # Generate Alembic migration file
-make migrate                    # Apply pending migrations
+make migrate                    # Apply pending migrations to Supabase Postgres
 make run-backend                # uvicorn on :8000
 make install-frontend           # npm install in frontend/
 make run-frontend               # Vite dev server on :5173
-make docker-up                  # Start PostgreSQL + Weaviate
-make docker-down                # Stop Docker services
 ```
+
+This branch uses **cloud-only services**: Supabase Postgres, Weaviate Cloud, Redis Cloud. No `docker-compose` — fill in `backend/.env` from `.env.example` and the app connects directly to the managed services.
 
 Backend commands run via `backend/venv/bin/` — never assume a globally activated venv.
 

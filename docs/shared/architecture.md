@@ -1,6 +1,6 @@
 ---
 doc_type: architecture
-tags: [monorepo, layout, services, ports]
+tags: [monorepo, layout, services, cloud]
 ---
 
 # Architecture Overview
@@ -11,9 +11,10 @@ tags: [monorepo, layout, services, ports]
 Amaraza/
 ├── frontend/          # React 18 + Vite + TypeScript
 ├── backend/           # Python + FastAPI + SQLAlchemy + Alembic
-├── infra/             # docker-compose.yml (PostgreSQL + Weaviate)
+├── mock/              # Seed scripts + CSV/JSON data
+├── docs/              # Feature docs, indexes, shared conventions
 ├── Makefile           # Shortcuts for all common tasks
-├── .env.example       # Environment variable template
+├── .env.example       # Environment variable template (cloud creds)
 └── README.md
 ```
 
@@ -21,16 +22,22 @@ Amaraza/
 |---|---|---|
 | `frontend/` | React 18, Vite, TypeScript, react-router-dom v6 | 5173 |
 | `backend/` | FastAPI, SQLAlchemy ORM, Alembic, python-jose, bcrypt | 8000 |
-| `infra/` | PostgreSQL 16, Weaviate, Redis | see below |
 
-## Infrastructure Ports
+## Cloud services (no Docker required)
+
+This branch runs entirely against managed cloud services. Connection
+strings live in `backend/.env` (see `.env.example`).
+
+| Service | Provider | Used for |
+|---|---|---|
+| PostgreSQL 16 | Supabase | All relational data (10 tables) |
+| Weaviate (vector DB) | Weaviate Cloud | Semantic-search vectors (HNSW + cosine) |
+| Redis | Upstash / Redis Cloud | Search result cache (TLS via `rediss://`) |
+
+Local services run on:
 
 | Service | Port |
 |---|---|
-| PostgreSQL | `localhost:5432` |
-| Weaviate HTTP | `localhost:8080` |
-| Weaviate gRPC | `localhost:50051` |
-| Redis | `localhost:6379` |
 | Backend API | `localhost:8000` |
 | Frontend dev | `localhost:5173` |
 

@@ -10,6 +10,7 @@ from weaviate.classes.config import (
     Property,
     VectorDistances,
 )
+from weaviate.classes.init import Auth
 from weaviate.classes.query import Filter, MetadataQuery
 from weaviate.collections import Collection
 from weaviate.util import generate_uuid5
@@ -24,15 +25,14 @@ _client: weaviate.WeaviateClient | None = None
 
 
 def connect() -> weaviate.WeaviateClient:
-    """Idempotently connect to Weaviate using settings."""
+    """Idempotently connect to Weaviate Cloud using settings."""
     global _client
     if _client is not None and _client.is_connected():
         return _client
     try:
-        _client = weaviate.connect_to_local(
-            host=settings.WEAVIATE_HOST,
-            port=settings.WEAVIATE_HTTP_PORT,
-            grpc_port=settings.WEAVIATE_GRPC_PORT,
+        _client = weaviate.connect_to_weaviate_cloud(
+            cluster_url=settings.WEAVIATE_URL,
+            auth_credentials=Auth.api_key(settings.WEAVIATE_API_KEY),
         )
     except Exception as e:  # noqa: BLE001
         raise VectorStoreUnavailable(f"connect failed: {e}") from e

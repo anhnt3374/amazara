@@ -2,7 +2,6 @@
         venv install-backend install-frontend \
         makemigrations migrate \
         run-backend run-frontend \
-        docker-up docker-down docker-logs \
         check-ml-env install-ml-cpu install-ml-gpu reindex \
         seed
 
@@ -11,26 +10,24 @@ help:
 	@echo "  make venv                  Create virtual environment at backend/venv"
 	@echo "  make install-backend       Install Python packages from requirements.txt"
 	@echo "  make makemigrations msg=x  Generate Alembic migration file from models"
-	@echo "  make migrate               Apply pending migrations to the database"
+	@echo "  make migrate               Apply pending migrations to Supabase Postgres"
 	@echo "  make run-backend           Run FastAPI dev server (port 8000)"
 	@echo ""
 	@echo "Semantic Search"
-	@echo "  make install-ml-cpu        Install PyTorch (CPU) and ML deps"
 	@echo "  make install-ml-gpu        Install PyTorch (CUDA 12.4) and ML deps"
+	@echo "  make install-ml-cpu        Install PyTorch (CPU) and ML deps (fallback)"
 	@echo "  make check-ml-env          Smoke-test ML stack (loads BGE encoder)"
-	@echo "  make reindex               Rebuild Weaviate collections from PostgreSQL products"
+	@echo "  make reindex               Rebuild Weaviate Cloud collections from Supabase products"
 	@echo ""
 	@echo "Frontend"
 	@echo "  make install-frontend      Install Node packages (npm install)"
 	@echo "  make run-frontend          Run Vite dev server (port 5173)"
 	@echo ""
-	@echo "Docker"
-	@echo "  make docker-up             Start PostgreSQL + Weaviate"
-	@echo "  make docker-down           Stop Docker services"
-	@echo "  make docker-logs           View Docker service logs"
-	@echo ""
 	@echo "Data"
 	@echo "  make seed                  Reset schema + validate + re-run all seeds"
+	@echo ""
+	@echo "Note: this branch uses cloud-only services — Supabase Postgres,"
+	@echo "Weaviate Cloud, and Redis Cloud. No docker-compose required."
 
 # ── Backend ───────────────────────────────────────────────────────────────────
 
@@ -73,17 +70,6 @@ install-ml-gpu:
 
 reindex:
 	cd backend && ../backend/venv/bin/python scripts/reindex_products.py
-
-# ── Docker ────────────────────────────────────────────────────────────────────
-
-docker-up:
-	docker compose -f infra/docker-compose.yml up -d
-
-docker-down:
-	docker compose -f infra/docker-compose.yml down
-
-docker-logs:
-	docker compose -f infra/docker-compose.yml logs -f
 
 # ── Data ──────────────────────────────────────────────────────────────────────
 

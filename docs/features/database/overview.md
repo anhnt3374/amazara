@@ -8,12 +8,13 @@ tags: [postgresql, weaviate, uuid, schema, tables]
 
 ## Engines
 
-| Engine | Purpose | Port |
-|---|---|---|
-| PostgreSQL 16 | Relational data (all 9 tables) | 5432 |
-| Weaviate | Vector search (semantic-search feature) | 8080 (HTTP) / 50051 (gRPC) |
+| Engine | Provider | Purpose | Connection |
+|---|---|---|---|
+| PostgreSQL 16 | Supabase (managed) | Relational data (all 9 tables) | `POSTGRES_*` env vars; SSL enforced |
+| Weaviate | Weaviate Cloud (managed) | Vector search (semantic-search feature) | `WEAVIATE_URL` + `WEAVIATE_API_KEY` |
 
-Both started via `make docker-up` (runs `infra/docker-compose.yml`).
+Both are cloud-only; no local Docker. See `docs/shared/setup.md` for how
+to provision and configure them.
 
 ## ORM / Migration Stack
 

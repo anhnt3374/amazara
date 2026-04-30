@@ -1,6 +1,6 @@
 # Amaraza
 
-E-commerce monorepo with **Frontend** (React + Vite + TypeScript), **Backend** (FastAPI + SQLAlchemy), and **Infra** (Docker — PostgreSQL 16 + Weaviate).
+E-commerce monorepo with **Frontend** (React + Vite + TypeScript), **Backend** (FastAPI + SQLAlchemy), and **cloud-only data plane** — Supabase Postgres, Weaviate Cloud, Redis Cloud.
 
 ## Project Structure
 
@@ -8,7 +8,6 @@ E-commerce monorepo with **Frontend** (React + Vite + TypeScript), **Backend** (
 Amaraza/
 ├── frontend/          # React + Vite + TypeScript
 ├── backend/           # Python + FastAPI + SQLAlchemy + Alembic
-├── infra/             # docker-compose.yml
 ├── mock/              # Seed scripts + CSV/JSON data
 ├── docs/              # Feature docs, indexes, shared conventions
 ├── Makefile           # Shortcuts for common tasks
@@ -19,15 +18,17 @@ Amaraza/
 ## Quick Start (via Makefile)
 
 ```bash
-cp .env.example backend/.env   # 1. Configure .env
-make docker-up                 # 2. Start PostgreSQL + Weaviate
-make venv                      # 3a. Create virtual environment
-make install-backend           # 3b. Install Python packages
-make migrate                   # 4. Create tables in PostgreSQL
-make run-backend               # 5. Run API server
+cp .env.example backend/.env   # 1. Fill in cloud credentials (see Step 1)
+make venv                      # 2a. Create virtual environment
+make install-backend           # 2b. Install Python packages
+make install-ml-gpu            # 2c. (or install-ml-cpu) install ML deps
+make migrate                   # 3. Apply migrations to Supabase Postgres
+make seed                      # 4. (Optional) seed mock data
+make reindex                   # 5. (Optional) build Weaviate Cloud index
+make run-backend               # 6. Run API server
 # In another terminal:
-make install-frontend          # 6. Install Node packages
-make run-frontend              # 7. Run Vite dev server
+make install-frontend          # 7. Install Node packages
+make run-frontend              # 8. Run Vite dev server
 ```
 
 See all available commands: `make help`
@@ -36,11 +37,19 @@ See all available commands: `make help`
 
 ## Requirements
 
-| Tool | Minimum version |
-|---|---|
-| Docker + Docker Compose | 24.x |
-| Python | 3.11+ |
-| Node.js | 20+ |
+| Tool | Minimum version | Why |
+|---|---|---|
+| Python | 3.13 (3.13.12 tested) | Backend runtime |
+| Node.js | 20+ | Vite frontend |
+| NVIDIA GPU + CUDA 12.4 | optional | Faster image embedding (`install-ml-gpu`); CPU fallback works |
+
+This branch does **not** require Docker. All data services are managed cloud:
+
+| Service | Provider (recommended) | What you get |
+|---|---|---|
+| PostgreSQL 16 | [Supabase](https://supabase.com) free tier | 500 MB, direct + pooled connections |
+| Weaviate (vector DB) | [Weaviate Cloud](https://console.weaviate.cloud) sandbox | 2-week free sandbox or paid serverless |
+| Redis | [Upstash](https://upstash.com) free tier | 10 K cmd/day, TLS, `rediss://` URL |
 
 ---
 
@@ -50,14 +59,31 @@ See all available commands: `make help`
 cp .env.example backend/.env
 ```
 
-Open `backend/.env` and update the values:
+Open `backend/.env` and fill in:
 
 ```env
-POSTGRES_PASSWORD=shope_password
-SECRET_KEY=<strong random string>
+# Supabase: Settings → Database → Connection string (Direct)
+POSTGRES_HOST=db.<project-ref>.supabase.co
+POSTGRES_PORT=5432
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=<your supabase db password>
+POSTGRES_DATABASE=postgres
+
+# Weaviate Cloud dashboard: copy the REST URL (without https://) and admin API key
+WEAVIATE_URL=<cluster-id>.<region>.gcp.weaviate.cloud
+WEAVIATE_API_KEY=<your weaviate admin key>
+
+# Upstash / Redis Cloud: copy the rediss:// connection string
+REDIS_URL=rediss://default:<password>@<host>:<port>
+
+# JWT
+SECRET_KEY=<strong random string — see below>
+
+# Chat
+GROQ_API_KEY=<your groq api key>
 ```
 
-Generate a random `SECRET_KEY`:
+Generate `SECRET_KEY`:
 
 ```bash
 python -c "import secrets; print(secrets.token_hex(32))"
@@ -65,70 +91,30 @@ python -c "import secrets; print(secrets.token_hex(32))"
 
 ---
 
-## Step 2 — Start Docker (PostgreSQL + Weaviate)
-
-```bash
-# From the project root
-docker compose -f infra/docker-compose.yml up -d
-```
-
-Check status:
-
-```bash
-docker compose -f infra/docker-compose.yml ps
-```
-
-| Service | Port |
-|---|---|
-| PostgreSQL | `localhost:5432` |
-| Weaviate HTTP | `localhost:8080` |
-| Weaviate gRPC | `localhost:50051` |
-| Redis | `localhost:6379` |
-
----
-
-## Step 3 — Install Backend
-
-**Quick (via Makefile — from project root):**
+## Step 2 — Install Backend
 
 ```bash
 make venv
 make install-backend
-```
-
-**Or manually:**
-
-```bash
-cd backend
-
-# Create virtual environment
-python -m venv venv
-
-# Activate venv
-source venv/bin/activate        # Linux / macOS
+make install-ml-gpu     # if your machine has CUDA 12.4
 # or
-venv\Scripts\activate           # Windows
-
-# Install packages
-pip install -r requirements.txt
+make install-ml-cpu     # CPU-only fallback
 ```
+
+ML deps include `torch`, `transformers`, `sentence-transformers`, `weaviate-client`, `redis`. The embedders (BGE + FG-CLIP 2) auto-detect GPU via `SEMANTIC_DEVICE=auto`.
 
 ---
 
-## Step 4 — Run Database Migrations
-
-Make sure PostgreSQL is running (Step 2), then:
+## Step 3 — Run Database Migrations
 
 ```bash
-# Quick (from project root):
 make migrate
-
-# Or manually (inside backend/ with venv active):
-alembic upgrade head
 ```
 
-This creates all 10 tables in PostgreSQL:
-`users`, `stores`, `brands`, `categories`, `products`, `orders`, `order_items`, `cart_items`, `addresses`, `reviews`
+This creates all 10 tables in your Supabase Postgres:
+`users`, `stores`, `brands`, `categories`, `products`, `orders`, `order_items`, `cart_items`, `addresses`, `reviews` (plus chat tables).
+
+Verify in Supabase dashboard → Table Editor.
 
 To generate a new migration after changing a model:
 
@@ -139,20 +125,42 @@ make migrate
 
 ---
 
-## Step 5 — Run Backend
+## Step 4 — (Optional) Seed Mock Data
 
 ```bash
-# Quick (from project root):
-make run-backend
+make seed   # full pipeline: reset schema + validate + seed all
+```
 
-# Or manually (inside backend/ with venv active):
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+Or run individual scripts under `mock/` (they are DB-agnostic and use the SQLAlchemy ORM, so they connect to Supabase via `DATABASE_URL`).
+
+---
+
+## Step 5 — (Optional) Build Weaviate Cloud Vector Index
+
+```bash
+make reindex
+```
+
+This calls `backend/scripts/reindex_products.py` which:
+
+1. Loads every Product row from Supabase Postgres.
+2. Encodes descriptions with **BGE-small-en-v1.5** (384-dim) and images with **FG-CLIP 2** (768-dim).
+3. Upserts into two Weaviate Cloud collections — `ProductImageVecV1` (one object per image) and `ProductDescVecV1` (one per product).
+
+First run downloads model weights (~600 MB FG-CLIP 2 + ~130 MB BGE) and uploads vectors over the network.
+
+---
+
+## Step 6 — Run Backend
+
+```bash
+make run-backend
 ```
 
 - API docs (Swagger UI): http://localhost:8000/docs
 - Health check: http://localhost:8000/health
 
-### API Endpoints
+### API Endpoints (subset)
 
 | Method | Endpoint | Description |
 |---|---|---|
@@ -160,41 +168,16 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 | POST | `/api/v1/auth/login` | Log in and receive a JWT token |
 | POST | `/api/v1/auth/logout` | Log out (client discards token) |
 | GET  | `/api/v1/auth/me` | Get current user info (Bearer token required) |
-| CRUD | `/api/v1/addresses` | User addresses (create, list, get, update, delete) |
-
-**Register example:**
-
-```bash
-curl -X POST http://localhost:8000/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "username": "johndoe",
-    "password": "secret123",
-    "fullname": "John Doe",
-    "avatar": null
-  }'
-```
-
-**Login example:**
-
-```bash
-curl -X POST http://localhost:8000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "user@example.com", "password": "secret123"}'
-```
+| CRUD | `/api/v1/addresses` | User addresses |
+| GET  | `/api/v1/products/search?search=...` | Semantic search (Weaviate Cloud) |
 
 ---
 
-## Step 6 — Install & Run Frontend
+## Step 7 — Install & Run Frontend
 
 ```bash
-# Quick (from project root):
 make install-frontend
 make run-frontend
-
-# Or manually:
-cd frontend && npm install && npm run dev
 ```
 
 Frontend runs at: http://localhost:5173
@@ -203,46 +186,12 @@ Vite is configured with a proxy: all requests to `/api/*` are forwarded to `http
 
 ---
 
-## Seed Mock Data (Optional)
-
-After running migrations, you can populate the database with mock data for development:
-
-```bash
-backend/venv/bin/python mock/seed_users.py       # 100 users
-backend/venv/bin/python mock/seed_addresses.py    # 1–3 addresses per user
-backend/venv/bin/python mock/seed_stores.py       # 20 stores
-backend/venv/bin/python mock/seed_products.py     # ~9,350 products (random store assignment)
-backend/venv/bin/python mock/seed_reviews.py      # 100–500 reviews per product
-```
-
-Scripts are idempotent — they skip records that already exist. Credentials are exported to CSV files in `mock/`.
-
----
-
 ## Smoke Test
 
-With Docker, backend, and frontend running, verify the main flows with:
+With backend and frontend running, verify the main flows with:
 
 ```bash
 backend/venv/bin/python backend/scripts/smoke_test.py
 ```
 
 The script prints a JSON summary and cleans up the generated `smoke.*` data automatically.
-
-Useful variants:
-
-```bash
-backend/venv/bin/python backend/scripts/smoke_test.py --keep-data
-backend/venv/bin/python backend/scripts/smoke_test.py --cleanup-only
-```
-
----
-
-## Stop Docker
-
-```bash
-docker compose -f infra/docker-compose.yml down
-
-# Stop and remove all volumes (deletes data):
-docker compose -f infra/docker-compose.yml down -v
-```
