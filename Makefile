@@ -2,7 +2,7 @@
         venv install-backend install-frontend \
         makemigrations migrate \
         run-backend run-frontend \
-        check-ml-env install-ml-cpu install-ml-gpu reindex \
+        check-ml-env install-ml-cpu install-ml-gpu reindex reindex-rebuild \
         seed
 
 help:
@@ -17,7 +17,8 @@ help:
 	@echo "  make install-ml-gpu        Install PyTorch (CUDA 12.4) and ML deps"
 	@echo "  make install-ml-cpu        Install PyTorch (CPU) and ML deps (fallback)"
 	@echo "  make check-ml-env          Smoke-test ML stack (loads BGE encoder)"
-	@echo "  make reindex               Rebuild Weaviate Cloud collections from Supabase products"
+	@echo "  make reindex               Upsert Weaviate Cloud vectors (idempotent, keeps orphans)"
+	@echo "  make reindex-rebuild       Drop + recreate Weaviate collections (wipes orphans)"
 	@echo ""
 	@echo "Frontend"
 	@echo "  make install-frontend      Install Node packages (npm install)"
@@ -70,6 +71,9 @@ install-ml-gpu:
 
 reindex:
 	cd backend && ../backend/venv/bin/python scripts/reindex_products.py
+
+reindex-rebuild:
+	cd backend && ../backend/venv/bin/python scripts/reindex_products.py --rebuild
 
 # ── Data ──────────────────────────────────────────────────────────────────────
 
