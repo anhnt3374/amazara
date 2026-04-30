@@ -2,7 +2,8 @@
         venv install-backend install-frontend \
         makemigrations migrate \
         run-backend run-frontend \
-        check-ml-env install-ml-cpu install-ml-gpu reindex reindex-rebuild \
+        check-ml-env install-ml-cpu install-ml-gpu \
+        reindex reindex-rebuild reindex-images reindex-text \
         seed
 
 help:
@@ -17,8 +18,10 @@ help:
 	@echo "  make install-ml-gpu        Install PyTorch (CUDA 12.4) and ML deps"
 	@echo "  make install-ml-cpu        Install PyTorch (CPU) and ML deps (fallback)"
 	@echo "  make check-ml-env          Smoke-test ML stack (loads BGE encoder)"
-	@echo "  make reindex               Upsert Weaviate Cloud vectors (idempotent, keeps orphans)"
-	@echo "  make reindex-rebuild       Drop + recreate Weaviate collections (wipes orphans)"
+	@echo "  make reindex               Upsert text + image vectors (idempotent, keeps orphans)"
+	@echo "  make reindex-images        Upsert image vectors only (skip descriptions)"
+	@echo "  make reindex-text          Upsert text vectors only (skip images)"
+	@echo "  make reindex-rebuild       Drop + recreate both collections (wipes orphans)"
 	@echo ""
 	@echo "Frontend"
 	@echo "  make install-frontend      Install Node packages (npm install)"
@@ -71,6 +74,12 @@ install-ml-gpu:
 
 reindex:
 	cd backend && ../backend/venv/bin/python scripts/reindex_products.py
+
+reindex-images:
+	cd backend && ../backend/venv/bin/python scripts/reindex_products.py --skip-descriptions
+
+reindex-text:
+	cd backend && ../backend/venv/bin/python scripts/reindex_products.py --skip-images
 
 reindex-rebuild:
 	cd backend && ../backend/venv/bin/python scripts/reindex_products.py --rebuild
