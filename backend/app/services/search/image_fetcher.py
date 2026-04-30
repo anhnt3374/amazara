@@ -20,7 +20,10 @@ DEFAULT_HEADERS = {
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
     ),
-    "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+    # Restrict to formats Pillow decodes natively. Advertising AVIF/HEIC
+    # makes some CDNs return those formats which Pillow can't open without
+    # extra plugins, so we get spurious "decode failed" logs.
+    "Accept": "image/webp,image/jpeg,image/png,image/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
 }
 
@@ -52,6 +55,19 @@ async def _fetch_one(
                 if resp.status >= 400:
                     # Transient (5xx, 429) — retry
                     raise RuntimeError(f"HTTP {resp.status}")
+                # Some CDNs serve a 200 with anti-bot HTML when they don't
+                # like the request. Check Content-Type before reading the
+                # body so we can label the failure mode clearly.
+                ctype = resp.headers.get("Content-Type", "").lower()
+                if ctype and not ctype.startswith("image/"):
+                    if status_counter is not None:
+                        status_counter["non_image_content"] += 1
+                    logger.info(
+                        "image %s returned 200 with Content-Type=%s (skip)",
+                        url,
+                        ctype,
+                    )
+                    return None
                 data = await resp.read()
             try:
                 img = Image.open(io.BytesIO(data))
@@ -62,7 +78,17 @@ async def _fetch_one(
             except (UnidentifiedImageError, OSError) as e:
                 if status_counter is not None:
                     status_counter["decode_error"] += 1
-                logger.warning("image decode failed for %s: %s", url, e)
+                # First 16 bytes (hex) — useful for spotting unexpected
+                # formats: ffd8ff = JPEG, 89504e47 = PNG, 52494646 = WebP/RIFF,
+                # 0000001c = AVIF/HEIC ftyp box, 3c21444f = "<!DO" (HTML).
+                head = data[:16].hex() if data else ""
+                logger.warning(
+                    "image decode failed for %s (head=%s, ctype=%s): %s",
+                    url,
+                    head,
+                    ctype or "?",
+                    e,
+                )
                 return None
         except Exception as e:  # noqa: BLE001 — retry on any network error
             last_error = e
