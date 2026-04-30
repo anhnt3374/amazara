@@ -60,7 +60,7 @@ See `backend/requirements.txt`. Key packages:
 | `fastapi` | Web framework |
 | `sqlalchemy` | ORM |
 | `alembic` | DB migrations |
-| `pymysql` | MySQL driver |
+| `psycopg[binary]` | PostgreSQL driver |
 | `python-jose[cryptography]` | JWT |
 | `bcrypt` | Password hashing |
 | `pydantic-settings` | Config from `.env` |

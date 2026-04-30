@@ -34,6 +34,6 @@ The design includes "Change" buttons for address, shipping method, and payment m
 ## When to add a new status value
 
 1. Append to `OrderStatus` (backend model + frontend type).
-2. Add an Alembic migration that extends the MySQL enum.
+2. Add an Alembic migration that extends the PostgreSQL enum.
 3. Add a row to the `TABS` array in `Orders.tsx` and a label to `STATUS_LABEL`.
 4. Add an endpoint or background job that can actually transition orders into the new state.

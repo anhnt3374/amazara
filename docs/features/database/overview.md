@@ -1,7 +1,7 @@
 ---
 feature: database
 doc_type: overview
-tags: [mysql, milvus, uuid, schema, tables]
+tags: [postgresql, weaviate, uuid, schema, tables]
 ---
 
 # Database — Overview
@@ -10,8 +10,8 @@ tags: [mysql, milvus, uuid, schema, tables]
 
 | Engine | Purpose | Port |
 |---|---|---|
-| MySQL 8.0 | Relational data (all 9 tables) | 3306 |
-| Milvus | Vector search (future use) | 19530 |
+| PostgreSQL 16 | Relational data (all 9 tables) | 5432 |
+| Weaviate | Vector search (semantic-search feature) | 8080 (HTTP) / 50051 (gRPC) |
 
 Both started via `make docker-up` (runs `infra/docker-compose.yml`).
 

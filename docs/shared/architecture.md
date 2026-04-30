@@ -11,7 +11,7 @@ tags: [monorepo, layout, services, ports]
 Amaraza/
 ├── frontend/          # React 18 + Vite + TypeScript
 ├── backend/           # Python + FastAPI + SQLAlchemy + Alembic
-├── infra/             # docker-compose.yml (MySQL + Milvus)
+├── infra/             # docker-compose.yml (PostgreSQL + Weaviate)
 ├── Makefile           # Shortcuts for all common tasks
 ├── .env.example       # Environment variable template
 └── README.md
@@ -21,16 +21,16 @@ Amaraza/
 |---|---|---|
 | `frontend/` | React 18, Vite, TypeScript, react-router-dom v6 | 5173 |
 | `backend/` | FastAPI, SQLAlchemy ORM, Alembic, python-jose, bcrypt | 8000 |
-| `infra/` | MySQL 8.0, Milvus standalone, etcd, MinIO | see below |
+| `infra/` | PostgreSQL 16, Weaviate, Redis | see below |
 
 ## Infrastructure Ports
 
 | Service | Port |
 |---|---|
-| MySQL | `localhost:3306` |
-| Milvus gRPC | `localhost:19530` |
-| Milvus HTTP | `localhost:9091` |
-| MinIO Console | `localhost:9001` |
+| PostgreSQL | `localhost:5432` |
+| Weaviate HTTP | `localhost:8080` |
+| Weaviate gRPC | `localhost:50051` |
+| Redis | `localhost:6379` |
 | Backend API | `localhost:8000` |
 | Frontend dev | `localhost:5173` |
 

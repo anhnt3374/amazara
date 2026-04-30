@@ -11,11 +11,11 @@ class Settings(BaseSettings):
     )
 
     # Database
-    MYSQL_HOST: str = Field()
-    MYSQL_PORT: int = Field()
-    MYSQL_USER: str = Field()
-    MYSQL_PASSWORD: str = Field()
-    MYSQL_DATABASE: str = Field()
+    POSTGRES_HOST: str = Field()
+    POSTGRES_PORT: int = Field()
+    POSTGRES_USER: str = Field()
+    POSTGRES_PASSWORD: str = Field()
+    POSTGRES_DATABASE: str = Field()
 
     # JWT
     SECRET_KEY: str = Field()
@@ -50,14 +50,12 @@ class Settings(BaseSettings):
     SEMANTIC_IMAGE_FETCH_RETRIES: int = 2
     SEMANTIC_IMAGE_FETCH_CONCURRENCY: int = 16
 
-    # ── Semantic search: Milvus ────────────────────────────────────────────
-    MILVUS_HOST: str = "localhost"
-    MILVUS_PORT: int = 19530
-    SEMANTIC_COLLECTION_IMAGE: str = "product_image_vec_v1"
-    SEMANTIC_COLLECTION_TEXT: str = "product_desc_vec_v1"
-    SEMANTIC_MILVUS_INDEX_TYPE: str = "IVF_FLAT"
-    SEMANTIC_MILVUS_NLIST: int = 128
-    SEMANTIC_MILVUS_NPROBE: int = 16
+    # ── Semantic search: Weaviate ──────────────────────────────────────────
+    WEAVIATE_HOST: str = "localhost"
+    WEAVIATE_HTTP_PORT: int = 8080
+    WEAVIATE_GRPC_PORT: int = 50051
+    SEMANTIC_COLLECTION_IMAGE: str = "ProductImageVecV1"
+    SEMANTIC_COLLECTION_TEXT: str = "ProductDescVecV1"
 
     # ── Semantic search: query ─────────────────────────────────────────────
     SEMANTIC_ANN_TOPN_IMAGE: int = 500
@@ -82,8 +80,8 @@ class Settings(BaseSettings):
     @property
     def DATABASE_URL(self) -> str:
         return (
-            f"mysql+pymysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}"
-            f"@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DATABASE}"
+            f"postgresql+psycopg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DATABASE}"
         )
 
 

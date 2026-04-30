@@ -17,13 +17,13 @@ def main() -> int:
     import torch
     import transformers
     import sentence_transformers
-    import pymilvus
+    import weaviate
 
     print(f"python      = {sys.version.split()[0]}")
     print(f"torch       = {torch.__version__}, cuda={torch.cuda.is_available()}")
     print(f"transformers= {transformers.__version__}")
     print(f"sentence_t. = {sentence_transformers.__version__}")
-    print(f"pymilvus    = {pymilvus.__version__}")
+    print(f"weaviate    = {weaviate.__version__}")
     print(f"numpy       = {np.__version__}")
 
     from sentence_transformers import SentenceTransformer

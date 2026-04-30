@@ -41,7 +41,7 @@ def _get_cache() -> SearchCache:
     return _cache_singleton
 
 
-def _search_image(query_vec: np.ndarray, expr: str | None) -> list[tuple[str, str, float]]:
+def _search_image(query_vec: np.ndarray, filters) -> list[tuple[str, str, float]]:
     from app.services.search import vector_store
 
     image_coll, _ = vector_store.ensure_collections()
@@ -49,11 +49,11 @@ def _search_image(query_vec: np.ndarray, expr: str | None) -> list[tuple[str, st
         image_coll,
         query=query_vec,
         top_k=settings.SEMANTIC_ANN_TOPN_IMAGE,
-        expr=expr,
+        filters=filters,
     )
 
 
-def _search_text(query_vec: np.ndarray, expr: str | None) -> list[tuple[str, float]]:
+def _search_text(query_vec: np.ndarray, filters) -> list[tuple[str, float]]:
     from app.services.search import vector_store
 
     _, text_coll = vector_store.ensure_collections()
@@ -61,7 +61,7 @@ def _search_text(query_vec: np.ndarray, expr: str | None) -> list[tuple[str, flo
         text_coll,
         query=query_vec,
         top_k=settings.SEMANTIC_ANN_TOPN_TEXT,
-        expr=expr,
+        filters=filters,
     )
 
 
@@ -87,11 +87,11 @@ async def semantic_search(
     if cached is not None:
         return cached
 
-    # Build Milvus filter expression. brand_ids and category_ids here are
+    # Build Weaviate filter object. brand_ids and category_ids here are
     # already-resolved scalar ID lists.
     from app.services.search.vector_store import build_filter_expr
 
-    expr = build_filter_expr(category_ids=category_ids, brand_ids=brand_ids)
+    filters = build_filter_expr(category_ids=category_ids, brand_ids=brand_ids)
 
     # Encode (sync — encoders are CPU/GPU-bound, but each call is one short
     # forward pass; running them sequentially is fine for query latency).
@@ -102,8 +102,8 @@ async def semantic_search(
 
     # Run both ANN searches in parallel.
     loop = asyncio.get_running_loop()
-    img_task = loop.run_in_executor(None, _search_image, q_img, expr)
-    txt_task = loop.run_in_executor(None, _search_text, q_txt, expr)
+    img_task = loop.run_in_executor(None, _search_image, q_img, filters)
+    txt_task = loop.run_in_executor(None, _search_text, q_txt, filters)
     image_rows, text_rows = await asyncio.gather(img_task, txt_task)
 
     image_scores = aggregate_image_scores(

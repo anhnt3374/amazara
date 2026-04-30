@@ -36,7 +36,7 @@ Use this file to find the right docs for a given question. Match your keyword to
 ---
 
 ## database
-**Keywords:** MySQL, Milvus, table, UUID, schema, FK, foreign key, UUIDMixin, alembic/versions, db schema
+**Keywords:** PostgreSQL, Weaviate, table, UUID, schema, FK, foreign key, UUIDMixin, alembic/versions, db schema
 
 | Question type | Read |
 |---|---|
@@ -88,12 +88,12 @@ Use this file to find the right docs for a given question. Match your keyword to
 ---
 
 ## search
-**Keywords:** semantic search, embeddings, FG-CLIP, FG-CLIP2, BGE, Milvus, vector search, similarity, image embedding, description embedding, ANN, reindex, top-K aggregation, fusion, outlier cut, cache, Redis
+**Keywords:** semantic search, embeddings, FG-CLIP, FG-CLIP2, BGE, Weaviate, vector search, similarity, image embedding, description embedding, ANN, reindex, top-K aggregation, fusion, outlier cut, cache, Redis
 
 | Question type | Read |
 |---|---|
 | How does search work overall? | `docs/features/search/overview.md` |
-| What Milvus collections and schemas exist? | `docs/features/search/architecture.md` |
+| What Weaviate collections and schemas exist? | `docs/features/search/architecture.md` |
 | What is the query / indexing pipeline? | `docs/features/search/flows.md` |
 | How do I rebuild the vector index? | `docs/features/search/flows.md` |
 | Which env vars tune ranking? | `docs/features/search/overview.md` |

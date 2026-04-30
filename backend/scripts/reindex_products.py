@@ -1,4 +1,4 @@
-"""Rebuild Milvus collections from MySQL Product rows.
+"""Rebuild Weaviate collections from PostgreSQL Product rows.
 
 Usage:
     python scripts/reindex_products.py [--rebuild] [--product-ids id1,id2]

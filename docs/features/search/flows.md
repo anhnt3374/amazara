@@ -18,7 +18,7 @@ Load all Product rows → batch (default 64) →
     fetch images concurrently (aiohttp)
     encode images with FG-CLIP 2
     L2-normalize all vectors
-    upsert into both Milvus collections
+    upsert into both Weaviate collections
 flush + reload + clear cache
 ```
 
@@ -38,7 +38,7 @@ indexed if its description embeds successfully.
 [6] outlier cut: drop items below 0.6 × top1
 [7] cache store full ranked list
 [8] post-rank sort (if user sort != relevance), paginate, hydrate Product
-    rows from MySQL, compute facets from candidate set
+    rows from PostgreSQL, compute facets from candidate set
 ```
 
 Latency budget on warm GPU: ~50–80 ms.

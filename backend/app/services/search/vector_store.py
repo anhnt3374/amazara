@@ -3,105 +3,122 @@ from __future__ import annotations
 import logging
 
 import numpy as np
-from pymilvus import (
-    Collection,
-    CollectionSchema,
+import weaviate
+from weaviate.classes.config import (
+    Configure,
     DataType,
-    FieldSchema,
-    connections,
-    utility,
+    Property,
+    VectorDistances,
 )
+from weaviate.classes.query import Filter, MetadataQuery
+from weaviate.collections import Collection
+from weaviate.util import generate_uuid5
 
 from app.core.config import settings
 from app.services.search.exceptions import VectorStoreUnavailable
 
 logger = logging.getLogger(__name__)
 
-_CONNECTION_ALIAS = "default"
+
+_client: weaviate.WeaviateClient | None = None
 
 
-def connect() -> None:
-    """Idempotently connect to Milvus using settings."""
-    if connections.has_connection(_CONNECTION_ALIAS):
-        return
+def connect() -> weaviate.WeaviateClient:
+    """Idempotently connect to Weaviate using settings."""
+    global _client
+    if _client is not None and _client.is_connected():
+        return _client
     try:
-        connections.connect(
-            alias=_CONNECTION_ALIAS,
-            host=settings.MILVUS_HOST,
-            port=settings.MILVUS_PORT,
+        _client = weaviate.connect_to_local(
+            host=settings.WEAVIATE_HOST,
+            port=settings.WEAVIATE_HTTP_PORT,
+            grpc_port=settings.WEAVIATE_GRPC_PORT,
         )
     except Exception as e:  # noqa: BLE001
         raise VectorStoreUnavailable(f"connect failed: {e}") from e
+    return _client
 
 
-def _image_schema() -> CollectionSchema:
-    return CollectionSchema(
-        fields=[
-            FieldSchema("id", DataType.VARCHAR, is_primary=True, max_length=64),
-            FieldSchema("product_id", DataType.VARCHAR, max_length=36),
-            FieldSchema("category_id", DataType.VARCHAR, max_length=36, nullable=True),
-            FieldSchema("brand_id", DataType.VARCHAR, max_length=36, nullable=True),
-            FieldSchema("image_idx", DataType.INT8),
-            FieldSchema("embedding", DataType.FLOAT_VECTOR, dim=settings.SEMANTIC_FGCLIP_DIM),
-        ],
-        description="One row per product image",
-    )
+def _hnsw_config():
+    return Configure.VectorIndex.hnsw(distance_metric=VectorDistances.COSINE)
 
 
-def _text_schema() -> CollectionSchema:
-    return CollectionSchema(
-        fields=[
-            FieldSchema("id", DataType.VARCHAR, is_primary=True, max_length=36),
-            FieldSchema("category_id", DataType.VARCHAR, max_length=36, nullable=True),
-            FieldSchema("brand_id", DataType.VARCHAR, max_length=36, nullable=True),
-            FieldSchema("embedding", DataType.FLOAT_VECTOR, dim=settings.SEMANTIC_TEXT_DIM),
-        ],
-        description="One row per product description",
-    )
+def _image_properties() -> list[Property]:
+    return [
+        Property(name="product_id", data_type=DataType.TEXT),
+        Property(name="category_id", data_type=DataType.TEXT),
+        Property(name="brand_id", data_type=DataType.TEXT),
+        Property(name="image_idx", data_type=DataType.INT),
+        Property(name="image_key", data_type=DataType.TEXT),
+    ]
 
 
-def _index_params() -> dict:
-    return {
-        "index_type": settings.SEMANTIC_MILVUS_INDEX_TYPE,
-        "metric_type": "IP",
-        "params": {"nlist": settings.SEMANTIC_MILVUS_NLIST},
-    }
+def _text_properties() -> list[Property]:
+    return [
+        Property(name="product_id", data_type=DataType.TEXT),
+        Property(name="category_id", data_type=DataType.TEXT),
+        Property(name="brand_id", data_type=DataType.TEXT),
+    ]
 
 
 def ensure_collections(*, drop: bool = False) -> tuple[Collection, Collection]:
-    connect()
+    client = connect()
 
     image_name = settings.SEMANTIC_COLLECTION_IMAGE
     text_name = settings.SEMANTIC_COLLECTION_TEXT
 
     if drop:
         for name in (image_name, text_name):
-            if utility.has_collection(name):
-                utility.drop_collection(name)
+            if client.collections.exists(name):
+                client.collections.delete(name)
 
-    if not utility.has_collection(image_name):
-        coll = Collection(image_name, schema=_image_schema())
-        coll.create_index(field_name="embedding", index_params=_index_params())
-    if not utility.has_collection(text_name):
-        coll = Collection(text_name, schema=_text_schema())
-        coll.create_index(field_name="embedding", index_params=_index_params())
+    if not client.collections.exists(image_name):
+        client.collections.create(
+            name=image_name,
+            properties=_image_properties(),
+            vector_config=Configure.Vectors.self_provided(
+                vector_index_config=_hnsw_config(),
+            ),
+        )
+    if not client.collections.exists(text_name):
+        client.collections.create(
+            name=text_name,
+            properties=_text_properties(),
+            vector_config=Configure.Vectors.self_provided(
+                vector_index_config=_hnsw_config(),
+            ),
+        )
 
-    image_coll = Collection(image_name)
-    text_coll = Collection(text_name)
-    image_coll.load()
-    text_coll.load()
-    return image_coll, text_coll
+    return client.collections.get(image_name), client.collections.get(text_name)
 
 
 def upsert_image_rows(
     coll: Collection,
     rows: list[dict],
 ) -> None:
-    """rows: list of {id, product_id, category_id, brand_id, image_idx, embedding}."""
+    """rows: list of {id, product_id, category_id, brand_id, image_idx, embedding}.
+
+    `id` is the legacy "<product_id>:<image_idx>" string; it is stored as
+    `image_key` and used to derive a deterministic UUID5 so that re-runs of
+    the indexer upsert in place rather than creating duplicates.
+    """
     if not rows:
         return
     try:
-        coll.upsert(rows)
+        with coll.batch.fixed_size(batch_size=100) as batch:
+            for r in rows:
+                image_key = r["id"]
+                batch.add_object(
+                    properties={
+                        "product_id": r["product_id"],
+                        "category_id": r.get("category_id"),
+                        "brand_id": r.get("brand_id"),
+                        "image_idx": r["image_idx"],
+                        "image_key": image_key,
+                    },
+                    vector=r["embedding"],
+                    uuid=generate_uuid5(image_key),
+                )
     except Exception as e:  # noqa: BLE001
         raise VectorStoreUnavailable(f"image upsert failed: {e}") from e
 
@@ -110,43 +127,58 @@ def upsert_text_rows(
     coll: Collection,
     rows: list[dict],
 ) -> None:
+    """rows: list of {id, category_id, brand_id, embedding}, where `id` is the
+    product_id. Uses UUID5(product_id) so re-runs upsert in place.
+    """
     if not rows:
         return
     try:
-        coll.upsert(rows)
+        with coll.batch.fixed_size(batch_size=100) as batch:
+            for r in rows:
+                product_id = r["id"]
+                batch.add_object(
+                    properties={
+                        "product_id": product_id,
+                        "category_id": r.get("category_id"),
+                        "brand_id": r.get("brand_id"),
+                    },
+                    vector=r["embedding"],
+                    uuid=generate_uuid5(product_id),
+                )
     except Exception as e:  # noqa: BLE001
         raise VectorStoreUnavailable(f"text upsert failed: {e}") from e
 
 
 def flush(coll: Collection) -> None:
-    coll.flush()
+    """No-op for Weaviate (writes are persisted automatically)."""
+    return None
 
 
 def search_image(
     coll: Collection,
     query: np.ndarray,
     top_k: int,
-    expr: str | None,
+    filters: Filter | None,
 ) -> list[tuple[str, str, float]]:
-    """Return list of (image_id, product_id, score) sorted by score desc."""
+    """Return list of (image_key, product_id, score) sorted by score desc."""
     try:
-        results = coll.search(
-            data=[query.tolist()],
-            anns_field="embedding",
-            param={"metric_type": "IP", "params": {"nprobe": settings.SEMANTIC_MILVUS_NPROBE}},
+        result = coll.query.near_vector(
+            near_vector=query.tolist(),
             limit=top_k,
-            expr=expr,
-            output_fields=["product_id"],
+            filters=filters,
+            return_properties=["product_id", "image_key"],
+            return_metadata=MetadataQuery(distance=True),
         )
     except Exception as e:  # noqa: BLE001
         raise VectorStoreUnavailable(f"image search failed: {e}") from e
 
-    # pymilvus 2.4.9 Hits is subscriptable but not iterable (no __iter__),
-    # so iterate by index.
-    hits = results[0]
     return [
-        (hits[i].id, hits[i].entity.get("product_id"), float(hits[i].score))
-        for i in range(len(hits))
+        (
+            obj.properties.get("image_key", ""),
+            obj.properties["product_id"],
+            _score_from_distance(obj.metadata.distance),
+        )
+        for obj in result.objects
     ]
 
 
@@ -154,39 +186,55 @@ def search_text(
     coll: Collection,
     query: np.ndarray,
     top_k: int,
-    expr: str | None,
+    filters: Filter | None,
 ) -> list[tuple[str, float]]:
     """Return list of (product_id, score) sorted by score desc."""
     try:
-        results = coll.search(
-            data=[query.tolist()],
-            anns_field="embedding",
-            param={"metric_type": "IP", "params": {"nprobe": settings.SEMANTIC_MILVUS_NPROBE}},
+        result = coll.query.near_vector(
+            near_vector=query.tolist(),
             limit=top_k,
-            expr=expr,
+            filters=filters,
+            return_properties=["product_id"],
+            return_metadata=MetadataQuery(distance=True),
         )
     except Exception as e:  # noqa: BLE001
         raise VectorStoreUnavailable(f"text search failed: {e}") from e
 
-    hits = results[0]
-    return [(hits[i].id, float(hits[i].score)) for i in range(len(hits))]
+    return [
+        (obj.properties["product_id"], _score_from_distance(obj.metadata.distance))
+        for obj in result.objects
+    ]
+
+
+def _score_from_distance(distance: float | None) -> float:
+    """Convert Weaviate cosine distance to a similarity score.
+
+    Cosine distance in Weaviate ranges 0 (identical) → 2 (opposite); the
+    similarity is `1 - distance`. Vectors in this codebase are L2-normalized,
+    so this yields the same cosine-similarity range that the previous Milvus
+    `IP` metric produced (typically 0..1 for relevant hits).
+    """
+    if distance is None:
+        return 0.0
+    return 1.0 - float(distance)
 
 
 def build_filter_expr(
     *, category_ids: list[str] | None, brand_ids: list[str] | None
-) -> str | None:
-    """Return a Milvus boolean expression or None.
+) -> Filter | None:
+    """Return a Weaviate filter object combining category/brand allow-lists.
 
-    `brand_ids` here refers to the *resolved* brand_id list to filter on; the
-    caller must have already converted brand_ids → category_ids if needed.
+    `brand_ids` here is the *resolved* brand_id list to filter on; the caller
+    must have already converted brand_ids → category_ids if needed. The
+    returned filter is applied as a pre-filter (allow-list) during ANN search.
     """
-    parts: list[str] = []
+    parts: list[Filter] = []
     if category_ids:
-        ids = ", ".join(f'"{c}"' for c in category_ids)
-        parts.append(f"category_id in [{ids}]")
+        parts.append(Filter.by_property("category_id").contains_any(category_ids))
     if brand_ids:
-        ids = ", ".join(f'"{b}"' for b in brand_ids)
-        parts.append(f"brand_id in [{ids}]")
+        parts.append(Filter.by_property("brand_id").contains_any(brand_ids))
     if not parts:
         return None
-    return " and ".join(parts)
+    if len(parts) == 1:
+        return parts[0]
+    return parts[0] & parts[1]

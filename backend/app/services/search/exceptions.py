@@ -7,7 +7,7 @@ class EmbedderUnavailable(SemanticSearchError):
 
 
 class VectorStoreUnavailable(SemanticSearchError):
-    """Raised when Milvus is unreachable or returns an unrecoverable error."""
+    """Raised when the vector store is unreachable or returns an unrecoverable error."""
 
 
 class CacheUnavailable(SemanticSearchError):

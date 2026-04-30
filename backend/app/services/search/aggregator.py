@@ -10,8 +10,8 @@ def aggregate_image_scores(
 
     Args:
         rows: iterable of (image_id, product_id, score). image_id is unused
-            but kept in the row shape because that is what Milvus search
-            results provide.
+            but kept in the row shape because that is what the vector store
+            search results provide.
         top_k: number of highest-scoring images to average per product. If a
             product has fewer than top_k images in `rows`, the mean is taken
             over what is available.

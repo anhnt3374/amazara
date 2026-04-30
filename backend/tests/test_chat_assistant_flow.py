@@ -74,11 +74,11 @@ class ChatAssistantFlowTest(unittest.TestCase):
         # Force the semantic-search path to fail in this isolated SQLite
         # test, so the chat assistant exercises its lexical-empty fallback
         # against the test DB rather than hitting a possibly-populated
-        # external Milvus instance.
+        # external vector store.
         from app.services.search.exceptions import VectorStoreUnavailable
 
         async def _raise_unavailable(*_args, **_kwargs):
-            raise VectorStoreUnavailable("milvus disabled in unit test")
+            raise VectorStoreUnavailable("vector store disabled in unit test")
 
         self._semantic_patch = patch(
             "app.crud.product.semantic_search",

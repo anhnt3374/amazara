@@ -1,6 +1,6 @@
 # Amaraza
 
-E-commerce monorepo with **Frontend** (React + Vite + TypeScript), **Backend** (FastAPI + SQLAlchemy), and **Infra** (Docker — MySQL 8 + Milvus).
+E-commerce monorepo with **Frontend** (React + Vite + TypeScript), **Backend** (FastAPI + SQLAlchemy), and **Infra** (Docker — PostgreSQL 16 + Weaviate).
 
 ## Project Structure
 
@@ -20,10 +20,10 @@ Amaraza/
 
 ```bash
 cp .env.example backend/.env   # 1. Configure .env
-make docker-up                 # 2. Start MySQL + Milvus
+make docker-up                 # 2. Start PostgreSQL + Weaviate
 make venv                      # 3a. Create virtual environment
 make install-backend           # 3b. Install Python packages
-make migrate                   # 4. Create tables in MySQL
+make migrate                   # 4. Create tables in PostgreSQL
 make run-backend               # 5. Run API server
 # In another terminal:
 make install-frontend          # 6. Install Node packages
@@ -53,7 +53,7 @@ cp .env.example backend/.env
 Open `backend/.env` and update the values:
 
 ```env
-MYSQL_PASSWORD=shope_password
+POSTGRES_PASSWORD=shope_password
 SECRET_KEY=<strong random string>
 ```
 
@@ -65,7 +65,7 @@ python -c "import secrets; print(secrets.token_hex(32))"
 
 ---
 
-## Step 2 — Start Docker (MySQL + Milvus)
+## Step 2 — Start Docker (PostgreSQL + Weaviate)
 
 ```bash
 # From the project root
@@ -80,10 +80,10 @@ docker compose -f infra/docker-compose.yml ps
 
 | Service | Port |
 |---|---|
-| MySQL | `localhost:3306` |
-| Milvus gRPC | `localhost:19530` |
-| Milvus HTTP | `localhost:9091` |
-| MinIO Console | `localhost:9001` |
+| PostgreSQL | `localhost:5432` |
+| Weaviate HTTP | `localhost:8080` |
+| Weaviate gRPC | `localhost:50051` |
+| Redis | `localhost:6379` |
 
 ---
 
@@ -117,7 +117,7 @@ pip install -r requirements.txt
 
 ## Step 4 — Run Database Migrations
 
-Make sure MySQL is running (Step 2), then:
+Make sure PostgreSQL is running (Step 2), then:
 
 ```bash
 # Quick (from project root):
@@ -127,7 +127,7 @@ make migrate
 alembic upgrade head
 ```
 
-This creates all 10 tables in MySQL:
+This creates all 10 tables in PostgreSQL:
 `users`, `stores`, `brands`, `categories`, `products`, `orders`, `order_items`, `cart_items`, `addresses`, `reviews`
 
 To generate a new migration after changing a model:

@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from sqlalchemy import create_engine
-from sqlalchemy.dialects import mysql
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Session
 
 import app.db.base  # noqa: F401
@@ -20,12 +20,12 @@ class ConversationOrderingTest(unittest.TestCase):
         self.session.close()
         self.engine.dispose()
 
-    def test_list_by_store_uses_mysql_safe_null_ordering(self) -> None:
+    def test_list_by_store_uses_is_null_ordering(self) -> None:
         captured = {}
 
         def fake_all(query):
             compiled = query.statement.compile(
-                dialect=mysql.dialect(),
+                dialect=postgresql.dialect(),
                 compile_kwargs={"literal_binds": True},
             )
             captured["sql"] = str(compiled)
@@ -38,12 +38,12 @@ class ConversationOrderingTest(unittest.TestCase):
         self.assertNotIn("NULLS LAST", sql)
         self.assertIn("conversations.last_message_at IS NULL", sql)
 
-    def test_list_by_user_uses_mysql_safe_null_ordering(self) -> None:
+    def test_list_by_user_uses_is_null_ordering(self) -> None:
         captured = {}
 
         def fake_all(query):
             compiled = query.statement.compile(
-                dialect=mysql.dialect(),
+                dialect=postgresql.dialect(),
                 compile_kwargs={"literal_binds": True},
             )
             captured["sql"] = str(compiled)

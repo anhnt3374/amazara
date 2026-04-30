@@ -12,11 +12,11 @@ run backend + frontend → verify. Follow top-to-bottom for a fresh machine.
 
 | Tool | Required version | Why |
 |---|---|---|
-| Docker + Docker Compose | 24.x+ | MySQL, Milvus, Redis, etcd, MinIO containers |
+| Docker + Docker Compose | 24.x+ | PostgreSQL, Weaviate, Redis containers |
 | Python | **3.13** (3.13.12 tested) | Production runtime; pyenv recommended |
 | Node.js | 20+ | Vite frontend |
-| Disk | ~6 GB free | torch + FG-CLIP 2 weights + Milvus data |
-| RAM | 8 GB+ | Milvus uses ~2 GB; embedders share rest |
+| Disk | ~6 GB free | torch + FG-CLIP 2 weights + Weaviate data |
+| RAM | 8 GB+ | Weaviate uses ~500 MB idle; embedders share rest |
 
 GPU is optional. Everything below works on CPU; ML index build is just slower.
 
@@ -45,7 +45,7 @@ Edit `backend/.env`. Required values:
 
 | Key | Example | Note |
 |---|---|---|
-| `MYSQL_PASSWORD` | `shope_password` | Match docker-compose default or override |
+| `POSTGRES_PASSWORD` | `shope_password` | Match docker-compose default or override |
 | `SECRET_KEY` | `<random>` | Generate: `python -c "import secrets; print(secrets.token_hex(32))"` |
 | `GROQ_API_KEY` | `gsk_...` | Required only if `BOT_ENGINE=groq` |
 
@@ -69,7 +69,7 @@ backend/venv/bin/pip install --upgrade pip
 backend/venv/bin/pip install -r backend/requirements-base.txt
 ```
 
-### 4b. ML stack (torch + transformers + pymilvus + redis client)
+### 4b. ML stack (torch + transformers + weaviate-client + redis client)
 
 Pick **one** based on hardware:
 
@@ -84,7 +84,7 @@ make install-ml-gpu
 These targets pull `torch==2.11.0+{cpu,cu124}` and
 `torchvision==0.26.0+{cpu,cu124}` from `download.pytorch.org`, then install
 the rest of `backend/requirements-ml.txt` (transformers, sentence-transformers,
-pymilvus, redis, etc.).
+weaviate-client, redis, etc.).
 
 > **Why those pins:** FG-CLIP 2 (`qihoo360/fg-clip2-base`) needs
 > `transformers ≥ 4.50` (uses `transformers.modeling_layers`), which in
@@ -105,7 +105,7 @@ make install-frontend
 make check-ml-env
 ```
 
-Expected: prints torch/transformers/pymilvus versions, then `OK` after
+Expected: prints torch/transformers/weaviate versions, then `OK` after
 loading BGE and running one forward pass. First run downloads BGE
 weights (~130 MB) into `~/.cache/huggingface`.
 
@@ -115,8 +115,8 @@ weights (~130 MB) into `~/.cache/huggingface`.
 make docker-up
 ```
 
-Brings up five containers: MySQL 8.0, Milvus 2.4.1 (with etcd + MinIO),
-and Redis 7. Wait until they report healthy:
+Brings up three containers: PostgreSQL 16, Weaviate 1.37.x, and Redis 7.
+Wait until they report healthy:
 
 ```bash
 docker ps --format "table {{.Names}}\t{{.Status}}"
@@ -125,18 +125,16 @@ docker ps --format "table {{.Names}}\t{{.Status}}"
 Expected output (after ~15 s):
 
 ```
-NAMES          STATUS
-shope_mysql    Up (healthy)
-shope_milvus   Up
-shope_redis    Up (healthy)
-shope_etcd     Up
-shope_minio    Up (healthy)
+NAMES             STATUS
+shope_postgres    Up (healthy)
+shope_weaviate    Up
+shope_redis       Up (healthy)
 ```
 
 ## 6. Database migrations + seed data
 
 ```bash
-# Apply Alembic migrations to create the 9 MySQL tables
+# Apply Alembic migrations to create the 9 PostgreSQL tables
 make migrate
 
 # Reset schema + run every seed script in dependency order
@@ -173,15 +171,15 @@ make reindex
 
 This calls `backend/scripts/reindex_products.py` which:
 
-1. Loads every Product row from MySQL.
+1. Loads every Product row from PostgreSQL.
 2. Splits image URLs (pipe-separated `|`), keeps the first
    `SEMANTIC_MAX_IMAGES_PER_PRODUCT` (default 4) per product.
 3. Concurrently fetches images via aiohttp.
 4. Embeds descriptions with **BGE-small-en-v1.5** (384-dim) and images with
    **FG-CLIP 2** (`qihoo360/fg-clip2-base`, 768-dim).
-5. Upserts into two Milvus collections:
-   - `product_image_vec_v1` — one row per image
-   - `product_desc_vec_v1` — one row per product description
+5. Upserts into two Weaviate collections:
+   - `ProductImageVecV1` — one object per image
+   - `ProductDescVecV1` — one object per product description
 6. Clears the search cache.
 
 First run downloads model weights (~600 MB FG-CLIP 2 + ~130 MB BGE) and
@@ -191,7 +189,7 @@ are faster (cached weights, can use `--product-ids` for partial updates).
 ### Common reindex flags
 
 ```bash
-# Rebuild from scratch (drop + recreate Milvus collections)
+# Rebuild from scratch (drop + recreate Weaviate collections)
 backend/venv/bin/python backend/scripts/reindex_products.py --rebuild
 
 # Reindex a subset only
@@ -249,7 +247,7 @@ in <50 ms (cache hit).
 curl 'http://localhost:8000/products/search?page=1' | head -c 600
 ```
 
-This skips Milvus entirely and returns the first page of all products.
+This skips Weaviate entirely and returns the first page of all products.
 
 ### Smoke test (full system)
 
@@ -305,11 +303,10 @@ docker compose -f infra/docker-compose.yml down -v   # Also drop all data
 |---|---|---|
 | `python -m venv` makes 3.12 venv | pyenv shim points at 3.12 | Use full path `~/.pyenv/versions/3.13.12/bin/python` |
 | `pip install torch==2.11.0+cpu` cannot find version | Wrong index URL | Ensure `--index-url https://download.pytorch.org/whl/cpu` |
-| `pymilvus` import fails with `marshmallow.__version_info__` | marshmallow 4.x | `requirements-ml.txt` pins `marshmallow==3.21.3`; reinstall |
 | `Unrecognized configuration class Fgclip2Config for AutoModel` | Used `AutoModel` instead of `AutoModelForCausalLM` | Already fixed in `embedders/fgclip.py` — pull latest |
-| `'SequenceIterator' object is not iterable` from Milvus search | pymilvus 2.4.9 quirk | Already fixed in `vector_store.py` — use latest |
+| `weaviate-client` import fails | Mismatched client version | `requirements-ml.txt` pins `weaviate-client>=4.9,<5`; reinstall |
 | `EmbedderUnavailable: FG-CLIP 2 load failed` | Wrong transformers version | `make install-ml-cpu` again to pull `transformers>=4.56` |
-| Endpoint returns 503 "semantic search temporarily unavailable" | Milvus down or weights missing | `make docker-up`; check logs in backend; first call downloads weights |
+| Endpoint returns 503 "semantic search temporarily unavailable" | Weaviate down or weights missing | `make docker-up`; check logs in backend; first call downloads weights |
 | `make reindex` slow on first run | Downloading weights + CPU embedding | Expected; subsequent runs hit cache |
 
 ## All Makefile commands
@@ -326,14 +323,14 @@ Semantic Search
   make install-ml-cpu        Install PyTorch (CPU) and ML deps
   make install-ml-gpu        Install PyTorch (CUDA 12.4) and ML deps
   make check-ml-env          Smoke-test ML stack (loads BGE encoder)
-  make reindex               Rebuild Milvus collections from MySQL products
+  make reindex               Rebuild Weaviate collections from PostgreSQL products
 
 Frontend
   make install-frontend      Install Node packages (npm install)
   make run-frontend          Run Vite dev server (port 5173)
 
 Docker
-  make docker-up             Start MySQL + Milvus + Redis
+  make docker-up             Start PostgreSQL + Weaviate + Redis
   make docker-down           Stop Docker services
   make docker-logs           View Docker service logs
 

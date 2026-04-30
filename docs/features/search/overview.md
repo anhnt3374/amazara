@@ -1,7 +1,7 @@
 ---
 feature: search
 doc_type: overview
-tags: [semantic-search, milvus, fg-clip2, bge-small, embeddings]
+tags: [semantic-search, weaviate, fg-clip2, bge-small, embeddings]
 ---
 
 # Search — Overview
@@ -20,7 +20,7 @@ The two scores are normalized and fused (`α=0.5` by default). Items below
 list is cached per `(query, brand_ids, category_ids)` for 10 minutes.
 
 When `search` is empty, the endpoint falls back to filter-only listing
-(no Milvus call, no encoding).
+(no Weaviate call, no encoding).
 
 ## Where things live
 
@@ -29,7 +29,7 @@ When `search` is empty, the endpoint falls back to filter-only listing
 | Orchestrator | `app/services/search/search_service.py` |
 | Image encoder + text-side encoder for image | `app/services/search/embedders/fgclip.py` |
 | Description encoder | `app/services/search/embedders/bge.py` |
-| Milvus client + schemas | `app/services/search/vector_store.py` |
+| Weaviate client + schemas | `app/services/search/vector_store.py` |
 | Image download | `app/services/search/image_fetcher.py` |
 | Score aggregation (top-K mean) | `app/services/search/aggregator.py` |
 | Score fusion + outlier cut | `app/services/search/fusion.py` |

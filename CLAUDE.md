@@ -18,7 +18,7 @@ make migrate                    # Apply pending migrations
 make run-backend                # uvicorn on :8000
 make install-frontend           # npm install in frontend/
 make run-frontend               # Vite dev server on :5173
-make docker-up                  # Start MySQL + Milvus
+make docker-up                  # Start PostgreSQL + Weaviate
 make docker-down                # Stop Docker services
 ```
 
