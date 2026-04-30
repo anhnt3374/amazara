@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 revision: str = 'd7e8f1a2b3c4'
@@ -22,14 +23,47 @@ SENDER_TYPE_VALUES = ('user', 'store', 'bot', 'system')
 MESSAGE_REF_TYPE_VALUES = ('product', 'order', 'order_event')
 
 
-def upgrade() -> None:
-    conversation_type = sa.Enum(*CONVERSATION_TYPE_VALUES, name='conversationtype')
-    sender_type = sa.Enum(*SENDER_TYPE_VALUES, name='sendertype')
-    message_ref_type = sa.Enum(*MESSAGE_REF_TYPE_VALUES, name='messagereftype')
+def _create_enum_idempotent(name: str, values: tuple[str, ...]) -> None:
+    """Create a Postgres ENUM type only if it doesn't exist.
 
-    conversation_type.create(op.get_bind(), checkfirst=True)
-    sender_type.create(op.get_bind(), checkfirst=True)
-    message_ref_type.create(op.get_bind(), checkfirst=True)
+    `op.create_table(..., sa.Column('x', sa.Enum(name=...)))` emits a bare
+    `CREATE TYPE` without `IF NOT EXISTS`, ignoring SQLAlchemy's `checkfirst`
+    on the explicit `Enum.create()` call. Wrap in a `DO $$ ... $$` block so
+    a partially-applied schema (e.g. previous migration interrupted between
+    type creation and table creation) doesn't make the retry crash.
+    """
+    enum_values = ", ".join(f"'{v}'" for v in values)
+    op.execute(f"""
+        DO $$ BEGIN
+            CREATE TYPE {name} AS ENUM ({enum_values});
+        EXCEPTION WHEN duplicate_object THEN null;
+        END $$;
+    """)
+
+
+def upgrade() -> None:
+    _create_enum_idempotent('conversationtype', CONVERSATION_TYPE_VALUES)
+    _create_enum_idempotent('sendertype', SENDER_TYPE_VALUES)
+    _create_enum_idempotent('messagereftype', MESSAGE_REF_TYPE_VALUES)
+
+    # `create_type=False` tells SQLAlchemy NOT to auto-emit `CREATE TYPE`
+    # when these column types are referenced inside `op.create_table()` —
+    # the types are already created above, idempotently.
+    conversation_type = postgresql.ENUM(
+        *CONVERSATION_TYPE_VALUES,
+        name='conversationtype',
+        create_type=False,
+    )
+    sender_type = postgresql.ENUM(
+        *SENDER_TYPE_VALUES,
+        name='sendertype',
+        create_type=False,
+    )
+    message_ref_type = postgresql.ENUM(
+        *MESSAGE_REF_TYPE_VALUES,
+        name='messagereftype',
+        create_type=False,
+    )
 
     op.create_table(
         'conversations',
@@ -79,6 +113,6 @@ def downgrade() -> None:
     op.drop_index('ix_conversation_store', table_name='conversations')
     op.drop_index('ix_conversation_user', table_name='conversations')
     op.drop_table('conversations')
-    sa.Enum(name='messagereftype').drop(op.get_bind(), checkfirst=True)
-    sa.Enum(name='sendertype').drop(op.get_bind(), checkfirst=True)
-    sa.Enum(name='conversationtype').drop(op.get_bind(), checkfirst=True)
+    op.execute("DROP TYPE IF EXISTS messagereftype")
+    op.execute("DROP TYPE IF EXISTS sendertype")
+    op.execute("DROP TYPE IF EXISTS conversationtype")
