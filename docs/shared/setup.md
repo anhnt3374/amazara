@@ -19,7 +19,7 @@ once and reuse them.
 |---|---|---|
 | Python | **3.13** (3.13.12 tested) | Backend runtime; pyenv recommended |
 | Node.js | 20+ | Vite frontend |
-| NVIDIA GPU + CUDA 12.4 | optional | Faster image embedding (`install-ml-gpu`) |
+| NVIDIA GPU + CUDA 12.6 / 12.8 | optional | Faster image embedding (`install-ml-cu126` for older GPUs, `install-ml-cu128` for RTX 50-series / Blackwell) |
 | Disk | ~2 GB free | torch + FG-CLIP 2 weights cached locally |
 | RAM | 4 GB+ | Embedders only — no local DB to host |
 
@@ -89,15 +89,18 @@ make install-backend
 Pick **one** based on hardware:
 
 ```bash
-# NVIDIA GPU with CUDA 12.4 (recommended for production / heavy reindex)
-make install-ml-gpu
+# RTX 50-series, H100, Blackwell (CUDA 12.8)
+make install-ml-cu128
+
+# RTX 30/40, A100, V100 (CUDA 12.6)
+make install-ml-cu126
 
 # CPU-only fallback
 make install-ml-cpu
 ```
 
-These targets pull `torch==2.11.0+{cu124,cpu}` and
-`torchvision==0.26.0+{cu124,cpu}` from `download.pytorch.org`, then
+These targets pull `torch==2.7.1+{cu128,cu126,cpu}` and
+`torchvision==0.22.1+{cu128,cu126,cpu}` from `download.pytorch.org`, then
 install the rest of `backend/requirements-ml.txt`
 (transformers, sentence-transformers, weaviate-client, redis, etc.).
 
@@ -254,11 +257,11 @@ restart the backend (zero-downtime cutover).
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `python -m venv` makes 3.12 venv | pyenv shim points at 3.12 | Use full path `~/.pyenv/versions/3.13.12/bin/python` |
-| `pip install torch==2.11.0+cu124` cannot find version | Wrong index URL | Ensure `--index-url https://download.pytorch.org/whl/cu124` |
+| `pip install torch==2.7.1+cuXYZ` cannot find version | Wrong index URL | Match the index URL to the wheel suffix: `whl/cu126` for `+cu126`, `whl/cu128` for `+cu128`, `whl/cpu` for `+cpu`. |
 | `psycopg.OperationalError: SSL connection required` | Supabase requires TLS | App appends `?sslmode=require` automatically — confirm `psycopg[binary]>=3.2` is installed |
 | `weaviate.exceptions.UnexpectedStatusCodeError: 401` | Wrong API key / cluster URL | Check `WEAVIATE_API_KEY` is the *Admin* key and `WEAVIATE_URL` has no `https://` prefix |
 | `redis.exceptions.AuthenticationError` | Wrong Redis URL | Use the full `rediss://default:<pwd>@host:port` string from your provider |
-| `Unrecognized configuration class Fgclip2Config for AutoModel` | Old transformers | `make install-ml-gpu` (or `cpu`) again to pull `transformers>=4.56` |
+| `Unrecognized configuration class Fgclip2Config for AutoModel` | Old transformers | Re-run an `install-ml-*` target to pull `transformers>=4.56`. |
 | Endpoint returns 503 "semantic search temporarily unavailable" | Weaviate Cloud unreachable or model load failure | Check Weaviate dashboard; check backend logs for embedder load error |
 | `make reindex` slow on first run | Downloading weights + network upload | Expected; subsequent runs are faster |
 
@@ -273,8 +276,9 @@ Backend
   make run-backend           Run FastAPI dev server (port 8000)
 
 Semantic Search
-  make install-ml-gpu        Install PyTorch (CUDA 12.4) and ML deps
-  make install-ml-cpu        Install PyTorch (CPU) and ML deps (fallback)
+  make install-ml-cpu        Install PyTorch (CPU) and ML deps
+  make install-ml-cu126      Install PyTorch (CUDA 12.6) and ML deps — RTX 30/40, A100, V100
+  make install-ml-cu128      Install PyTorch (CUDA 12.8) and ML deps — RTX 50-series, H100, Blackwell
   make check-ml-env          Smoke-test ML stack (loads BGE encoder)
   make reindex               Rebuild Weaviate Cloud collections from Supabase products
 
