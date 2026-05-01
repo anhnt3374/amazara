@@ -21,7 +21,7 @@ Amaraza/
 cp .env.example backend/.env   # 1. Fill in cloud credentials (see Step 1)
 make venv                      # 2a. Create virtual environment
 make install-backend           # 2b. Install Python packages
-make install-ml-gpu            # 2c. (or install-ml-cpu) install ML deps
+make install-ml-cu128          # 2c. (or install-ml-cu126 / install-ml-cpu) install ML deps
 make migrate                   # 3. Apply migrations to Supabase Postgres
 make seed                      # 4. (Optional) seed mock data
 make reindex                   # 5. (Optional) build Weaviate Cloud index
@@ -41,7 +41,7 @@ See all available commands: `make help`
 |---|---|---|
 | Python | 3.13 (3.13.12 tested) | Backend runtime |
 | Node.js | 20+ | Vite frontend |
-| NVIDIA GPU + CUDA 12.4 | optional | Faster image embedding (`install-ml-gpu`); CPU fallback works |
+| NVIDIA GPU + CUDA 12.6 / 12.8 | optional | Faster image embedding (`install-ml-cu126` for RTX 30/40 / A100, `install-ml-cu128` for RTX 50-series / Blackwell). CPU fallback works. |
 
 This branch does **not** require Docker. All data services are managed cloud:
 
@@ -96,8 +96,8 @@ python -c "import secrets; print(secrets.token_hex(32))"
 ```bash
 make venv
 make install-backend
-make install-ml-gpu     # if your machine has CUDA 12.4
-# or
+make install-ml-cu128   # RTX 50-series, H100, Blackwell (CUDA 12.8)
+make install-ml-cu126   # RTX 30/40, A100, V100 (CUDA 12.6)
 make install-ml-cpu     # CPU-only fallback
 ```
 

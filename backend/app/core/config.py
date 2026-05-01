@@ -60,8 +60,17 @@ class Settings(BaseSettings):
     SEMANTIC_ANN_TOPN_IMAGE: int = 500
     SEMANTIC_ANN_TOPN_TEXT: int = 500
     SEMANTIC_IMAGE_AGG_TOP_K: int = 3
-    SEMANTIC_FUSION_ALPHA: float = 0.5
+    SEMANTIC_FUSION_ALPHA: float = 0.8
     SEMANTIC_OUTLIER_RATIO_TAU: float = 0.6
+
+    # ── Semantic search: HNSW tuning ───────────────────────────────────────
+    # ef = search beam width. None → use Weaviate's dynamic ef (capped at
+    # dynamic_ef_max). Static value gives consistent latency/recall trade
+    # regardless of top_k.
+    SEMANTIC_HNSW_EF: int | None = None
+    SEMANTIC_HNSW_DYNAMIC_EF_FACTOR: int = 8
+    SEMANTIC_HNSW_DYNAMIC_EF_MIN: int = 100
+    SEMANTIC_HNSW_DYNAMIC_EF_MAX: int = 500
 
     # ── Semantic search: cache (Redis Cloud) ───────────────────────────────
     SEMANTIC_CACHE_BACKEND: Literal["memory", "redis"] = "redis"

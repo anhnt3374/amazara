@@ -19,12 +19,21 @@ def main() -> int:
     import sentence_transformers
     import weaviate
 
-    print(f"python      = {sys.version.split()[0]}")
-    print(f"torch       = {torch.__version__}, cuda={torch.cuda.is_available()}")
-    print(f"transformers= {transformers.__version__}")
-    print(f"sentence_t. = {sentence_transformers.__version__}")
-    print(f"weaviate    = {weaviate.__version__}")
-    print(f"numpy       = {np.__version__}")
+    print(f"python              = {sys.version.split()[0]}")
+    print(f"torch               = {torch.__version__}")
+    print(f"torch.version.cuda  = {torch.version.cuda}")
+    print(f"cuda available      = {torch.cuda.is_available()}")
+    if torch.cuda.is_available():
+        idx = torch.cuda.current_device()
+        cap = torch.cuda.get_device_capability(idx)
+        print(f"cuda device count   = {torch.cuda.device_count()}")
+        print(f"cuda device {idx}        = {torch.cuda.get_device_name(idx)} (sm_{cap[0]}{cap[1]})")
+    else:
+        print("hint                = running on CPU wheel; install-ml-cu126/cu128 if you have an NVIDIA GPU")
+    print(f"transformers        = {transformers.__version__}")
+    print(f"sentence_t.         = {sentence_transformers.__version__}")
+    print(f"weaviate            = {weaviate.__version__}")
+    print(f"numpy               = {np.__version__}")
 
     from sentence_transformers import SentenceTransformer
 

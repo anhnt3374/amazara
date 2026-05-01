@@ -42,7 +42,7 @@ All parameters live on `Settings` (env-driven). The most useful ones:
 
 | Env | Default | Effect |
 |---|---|---|
-| `SEMANTIC_FUSION_ALPHA` | `0.5` | image weight; text = 1−α |
+| `SEMANTIC_FUSION_ALPHA` | `0.8` | image weight; text = 1−α |
 | `SEMANTIC_OUTLIER_RATIO_TAU` | `0.6` | drop items below τ × top1 |
 | `SEMANTIC_IMAGE_AGG_TOP_K` | `3` | mean of K best images per product |
 | `SEMANTIC_ANN_TOPN_IMAGE` | `500` | ANN limit, image side |

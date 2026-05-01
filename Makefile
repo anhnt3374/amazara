@@ -2,7 +2,7 @@
         venv install-backend install-frontend \
         makemigrations migrate \
         run-backend run-frontend \
-        check-ml-env install-ml-cpu install-ml-gpu \
+        check-ml-env install-ml-cpu install-ml-cu126 install-ml-cu128 \
         reindex reindex-rebuild reindex-images reindex-text \
         seed
 
@@ -15,8 +15,9 @@ help:
 	@echo "  make run-backend           Run FastAPI dev server (port 8000)"
 	@echo ""
 	@echo "Semantic Search"
-	@echo "  make install-ml-gpu        Install PyTorch (CUDA 12.4) and ML deps"
-	@echo "  make install-ml-cpu        Install PyTorch (CPU) and ML deps (fallback)"
+	@echo "  make install-ml-cpu        Install PyTorch (CPU) and ML deps"
+	@echo "  make install-ml-cu126      Install PyTorch (CUDA 12.6) and ML deps — RTX 30/40, A100, V100"
+	@echo "  make install-ml-cu128      Install PyTorch (CUDA 12.8) and ML deps — RTX 50-series, H100, Blackwell"
 	@echo "  make check-ml-env          Smoke-test ML stack (loads BGE encoder)"
 	@echo "  make reindex               Upsert text + image vectors (idempotent, keeps orphans)"
 	@echo "  make reindex-images        Upsert image vectors only (skip descriptions)"
@@ -65,11 +66,15 @@ check-ml-env:
 	cd backend && ../backend/venv/bin/python scripts/check_ml_env.py
 
 install-ml-cpu:
-	backend/venv/bin/pip install --index-url https://download.pytorch.org/whl/cpu torch==2.6.0+cpu torchvision==0.21.0+cpu
+	backend/venv/bin/pip install --index-url https://download.pytorch.org/whl/cpu torch==2.7.1+cpu torchvision==0.22.1+cpu
 	backend/venv/bin/pip install -r backend/requirements-ml.txt
 
-install-ml-gpu:
-	backend/venv/bin/pip install --index-url https://download.pytorch.org/whl/cu124 torch==2.6.0+cu124 torchvision==0.21.0+cu124
+install-ml-cu126:
+	backend/venv/bin/pip install --index-url https://download.pytorch.org/whl/cu126 torch==2.7.1+cu126 torchvision==0.22.1+cu126
+	backend/venv/bin/pip install -r backend/requirements-ml.txt
+
+install-ml-cu128:
+	backend/venv/bin/pip install --index-url https://download.pytorch.org/whl/cu128 torch==2.7.1+cu128 torchvision==0.22.1+cu128
 	backend/venv/bin/pip install -r backend/requirements-ml.txt
 
 reindex:

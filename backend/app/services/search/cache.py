@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
@@ -33,6 +34,7 @@ class SearchCache(Protocol):
     async def get(self, key: str) -> RankedList | None: ...
     async def set(self, key: str, value: RankedList, ttl: int) -> None: ...
     async def clear(self) -> None: ...
+    async def aclose(self) -> None: ...
 
 
 class InMemoryTTLCache:
@@ -66,15 +68,28 @@ class InMemoryTTLCache:
     async def clear(self) -> None:
         self._cache.clear()
 
+    async def aclose(self) -> None:
+        return None
+
 
 class RedisCache:
     def __init__(self, url: str) -> None:
         self._url = url
         self._client: aioredis.Redis | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
 
     async def _conn(self) -> aioredis.Redis:
+        # redis-py binds connections to the event loop that first uses them.
+        # If a different loop is running now, the previous client's transport
+        # was closed by loop.close() — drop it without awaiting aclose() (the
+        # dead loop can't run cleanup) and rebuild against the current loop.
+        running = asyncio.get_running_loop()
+        if self._client is not None and self._loop is not running:
+            self._client = None
+            self._loop = None
         if self._client is None:
             self._client = aioredis.from_url(self._url, decode_responses=True)
+            self._loop = running
         return self._client
 
     async def get(self, key: str) -> RankedList | None:
@@ -106,6 +121,14 @@ class RedisCache:
             await client.flushdb()
         except Exception as e:  # noqa: BLE001
             raise CacheUnavailable(f"redis clear failed: {e}") from e
+
+    async def aclose(self) -> None:
+        client, self._client, self._loop = self._client, None, None
+        if client is not None:
+            try:
+                await client.aclose()
+            except Exception as e:  # noqa: BLE001
+                logger.debug("redis aclose failed: %s", e)
 
 
 def build_cache_from_settings() -> SearchCache:

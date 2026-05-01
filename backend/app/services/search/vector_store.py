@@ -8,6 +8,7 @@ from weaviate.classes.config import (
     Configure,
     DataType,
     Property,
+    Reconfigure,
     VectorDistances,
 )
 from weaviate.classes.init import Auth
@@ -39,8 +40,66 @@ def connect() -> weaviate.WeaviateClient:
     return _client
 
 
+def disconnect() -> None:
+    """Close the cached Weaviate client (if any). Safe to call twice."""
+    global _client
+    client, _client = _client, None
+    if client is not None:
+        try:
+            client.close()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("weaviate close failed: %s", e)
+
+
 def _hnsw_config():
-    return Configure.VectorIndex.hnsw(distance_metric=VectorDistances.COSINE)
+    # Build-time HNSW config. ef-related fields are also live-tunable —
+    # see apply_runtime_hnsw_config() for pushing changes to existing
+    # collections without a reindex.
+    return Configure.VectorIndex.hnsw(
+        distance_metric=VectorDistances.COSINE,
+        ef=settings.SEMANTIC_HNSW_EF if settings.SEMANTIC_HNSW_EF is not None else -1,
+        dynamic_ef_factor=settings.SEMANTIC_HNSW_DYNAMIC_EF_FACTOR,
+        dynamic_ef_min=settings.SEMANTIC_HNSW_DYNAMIC_EF_MIN,
+        dynamic_ef_max=settings.SEMANTIC_HNSW_DYNAMIC_EF_MAX,
+    )
+
+
+def apply_runtime_hnsw_config() -> None:
+    """Push live-tunable HNSW params (ef, dynamic_ef_*) to existing
+    collections. Idempotent. Server applies without reindex.
+
+    Collections use named-vector schema (single vector named "default"),
+    so update goes through Reconfigure.Vectors.update.
+    """
+    client = connect()
+    hnsw_update = Reconfigure.VectorIndex.hnsw(
+        ef=settings.SEMANTIC_HNSW_EF,  # None → no change on this field
+        dynamic_ef_factor=settings.SEMANTIC_HNSW_DYNAMIC_EF_FACTOR,
+        dynamic_ef_min=settings.SEMANTIC_HNSW_DYNAMIC_EF_MIN,
+        dynamic_ef_max=settings.SEMANTIC_HNSW_DYNAMIC_EF_MAX,
+    )
+    vector_update = Reconfigure.Vectors.update(
+        name="default",
+        vector_index_config=hnsw_update,
+    )
+    for name in (
+        settings.SEMANTIC_COLLECTION_IMAGE,
+        settings.SEMANTIC_COLLECTION_TEXT,
+    ):
+        if not client.collections.exists(name):
+            continue
+        try:
+            client.collections.get(name).config.update(vector_config=vector_update)
+            logger.info(
+                "Applied HNSW config to %s: ef=%s dyn_factor=%d dyn_min=%d dyn_max=%d",
+                name,
+                settings.SEMANTIC_HNSW_EF,
+                settings.SEMANTIC_HNSW_DYNAMIC_EF_FACTOR,
+                settings.SEMANTIC_HNSW_DYNAMIC_EF_MIN,
+                settings.SEMANTIC_HNSW_DYNAMIC_EF_MAX,
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.warning("HNSW reconfigure on %s failed: %s", name, e)
 
 
 def _image_properties() -> list[Property]:
