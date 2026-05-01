@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 
 import numpy as np
 
@@ -80,11 +81,22 @@ async def semantic_search(
     if not query or not query.strip():
         return []
 
+    t_start = time.perf_counter()
+
     cache = _get_cache()
     key = make_cache_key(query, brand_ids, category_ids)
 
+    t0 = time.perf_counter()
     cached = await cache.get(key)
+    cache_get_ms = (time.perf_counter() - t0) * 1000
     if cached is not None:
+        logger.info(
+            "semantic_search query=%r hit=cache total=%.1fms cache_get=%.1fms results=%d",
+            query,
+            (time.perf_counter() - t_start) * 1000,
+            cache_get_ms,
+            len(cached),
+        )
         return cached
 
     # Build Weaviate filter object. brand_ids and category_ids here are
@@ -97,31 +109,78 @@ async def semantic_search(
     # forward pass; running them sequentially is fine for query latency).
     txt_embedder = _get_text_embedder()
     fg_embedder = _get_image_text_embedder()
+
+    t0 = time.perf_counter()
     q_txt = txt_embedder.encode([query])[0]
+    embed_text_ms = (time.perf_counter() - t0) * 1000
+
+    t0 = time.perf_counter()
     q_img = fg_embedder.encode([query])[0]
+    embed_image_ms = (time.perf_counter() - t0) * 1000
 
-    # Run both ANN searches in parallel.
+    # Run both ANN searches in parallel; time each independently.
     loop = asyncio.get_running_loop()
-    img_task = loop.run_in_executor(None, _search_image, q_img, filters)
-    txt_task = loop.run_in_executor(None, _search_text, q_txt, filters)
-    image_rows, text_rows = await asyncio.gather(img_task, txt_task)
 
+    async def _timed(awaitable):
+        t = time.perf_counter()
+        res = await awaitable
+        return res, (time.perf_counter() - t) * 1000
+
+    (image_rows, ann_image_ms), (text_rows, ann_text_ms) = await asyncio.gather(
+        _timed(loop.run_in_executor(None, _search_image, q_img, filters)),
+        _timed(loop.run_in_executor(None, _search_text, q_txt, filters)),
+    )
+
+    t0 = time.perf_counter()
     image_scores = aggregate_image_scores(
         image_rows, top_k=settings.SEMANTIC_IMAGE_AGG_TOP_K
     )
     text_scores = dict(text_rows)
+    aggregate_ms = (time.perf_counter() - t0) * 1000
 
+    t0 = time.perf_counter()
     ranked = fuse_and_filter(
         image_scores=image_scores,
         text_scores=text_scores,
         alpha=settings.SEMANTIC_FUSION_ALPHA,
         tau=settings.SEMANTIC_OUTLIER_RATIO_TAU,
     )
+    fuse_ms = (time.perf_counter() - t0) * 1000
 
+    t0 = time.perf_counter()
     await cache.set(key, ranked, ttl=settings.SEMANTIC_CACHE_TTL_SEC)
+    cache_set_ms = (time.perf_counter() - t0) * 1000
+
+    total_ms = (time.perf_counter() - t_start) * 1000
+    logger.info(
+        "semantic_search query=%r hit=miss total=%.1fms "
+        "cache_get=%.1f embed_text=%.1f embed_image=%.1f "
+        "ann_image=%.1f(rows=%d) ann_text=%.1f(rows=%d) "
+        "aggregate=%.1f fuse=%.1f cache_set=%.1f results=%d",
+        query,
+        total_ms,
+        cache_get_ms,
+        embed_text_ms,
+        embed_image_ms,
+        ann_image_ms,
+        len(image_rows),
+        ann_text_ms,
+        len(text_rows),
+        aggregate_ms,
+        fuse_ms,
+        cache_set_ms,
+        len(ranked),
+    )
     return ranked
 
 
 async def clear_cache() -> None:
     cache = _get_cache()
     await cache.clear()
+
+
+async def aclose_cache() -> None:
+    global _cache_singleton
+    cache, _cache_singleton = _cache_singleton, None
+    if cache is not None:
+        await cache.aclose()

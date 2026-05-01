@@ -65,5 +65,23 @@ class RedisCacheFailureTest(unittest.TestCase):
         self.assertIsNone(result)
 
 
+class RedisCacheLoopBindingTest(unittest.TestCase):
+    def test_conn_rebinds_when_event_loop_changes(self) -> None:
+        # Regression: a single RedisCache instance reused across two
+        # asyncio.run() calls must not return a client whose underlying
+        # transport was closed by the first loop.
+        from app.services.search.cache import RedisCache
+
+        cache = RedisCache("redis://localhost:1/0")
+
+        async def get_client():
+            return await cache._conn()
+
+        client_1 = asyncio.run(get_client())
+        client_2 = asyncio.run(get_client())
+
+        self.assertIsNot(client_1, client_2)
+
+
 if __name__ == "__main__":
     unittest.main()

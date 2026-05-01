@@ -69,7 +69,7 @@ Semantic-search defaults are already in `.env.example`; useful tuning knobs:
 
 | Key | Default | Effect |
 |---|---|---|
-| `SEMANTIC_FUSION_ALPHA` | `0.5` | Weight of image side in score fusion (text = 1−α) |
+| `SEMANTIC_FUSION_ALPHA` | `0.8` | Weight of image side in score fusion (text = 1−α) |
 | `SEMANTIC_OUTLIER_RATIO_TAU` | `0.6` | Drop items below `τ × top1` |
 | `SEMANTIC_IMAGE_AGG_TOP_K` | `3` | Mean of K best images per product |
 | `SEMANTIC_DEVICE` | `auto` | `auto` / `cuda` / `cpu` |
